@@ -105,8 +105,8 @@ export function Settings() {
 
   const handleShowLogs = async () => {
     try {
-      const logs = await hostApiFetch<{ content: string }>('/api/logs?tailLines=100');
-      setLogContent(logs.content);
+      const logs = await invokeIpc<string>('read_log_file', { tailLines: 100 });
+      setLogContent(logs);
       setShowLogs(true);
     } catch {
       setLogContent('(Failed to load logs)');
@@ -116,9 +116,9 @@ export function Settings() {
 
   const handleOpenLogDir = async () => {
     try {
-      const { dir: logDir } = await hostApiFetch<{ dir: string | null }>('/api/logs/dir');
+      const logDir = await invokeIpc<string>('get_log_dir');
       if (logDir) {
-        await invokeIpc('shell:showItemInFolder', logDir);
+        await invokeIpc('show_item_in_folder', { path: logDir });
       }
     } catch {
       // ignore

@@ -110,6 +110,11 @@ impl Logger {
         &self.log_dir
     }
 
+    /// Get current log file path
+    pub fn get_current_file_path(&self) -> PathBuf {
+        self.current_file.try_read().map(|f| f.clone()).unwrap_or_else(|_| self.log_dir.join("clawx.log"))
+    }
+
     /// Set log level
     pub async fn set_level(&self, level: LogLevel) {
         *self.level.write().await = level;
@@ -311,6 +316,24 @@ pub fn init_logger() -> Result<Arc<Logger>> {
     let log_dir = data_dir.join("logs");
 
     let logger = Logger::new(log_dir)?;
+
+    // Configure tracing_subscriber to write to the log file
+    let log_file = logger.get_current_file_path();
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_file)
+        .context("Failed to open log file for tracing")?;
+
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
+        )
+        .with_writer(std::sync::Mutex::new(file))
+        .with_ansi(false)
+        .init();
+
     Ok(Arc::new(logger))
 }
 

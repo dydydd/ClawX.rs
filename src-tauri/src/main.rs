@@ -131,13 +131,8 @@ pub fn run() {
             commands::oauth::oauth_get_status,
         ])
         .setup(|app| {
-            // Initialize logging
-            tracing_subscriber::fmt()
-                .with_env_filter(
-                    tracing_subscriber::EnvFilter::try_from_default_env()
-                        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
-                )
-                .init();
+            // Logging is already initialized in AppState::new()
+            // (tracing_subscriber configured to write to log file)
 
             tracing::info!("=== ClawX Application Starting (Tauri) ===");
             tracing::debug!(

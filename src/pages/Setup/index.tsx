@@ -602,9 +602,9 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
 
   const handleOpenLogDir = async () => {
     try {
-      const logDir = await invokeIpc<string>('logs:get_log_dir');
+      const logDir = await invokeIpc<string>('get_log_dir');
       if (logDir) {
-        await invokeIpc('shell:show_item_in_folder', { path: logDir });
+        await invokeIpc('show_item_in_folder', { path: logDir });
       }
     } catch {
       // ignore
