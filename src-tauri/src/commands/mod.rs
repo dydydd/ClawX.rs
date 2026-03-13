@@ -11,7 +11,6 @@ pub mod window;
 pub mod shell;
 pub mod files;
 pub mod openclaw;
-pub mod openclaw_version;
 pub mod logs;
 pub mod hostapi;
 pub mod nodejs;

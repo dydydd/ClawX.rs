@@ -116,8 +116,6 @@ pub fn run() {
             commands::openclaw::openclaw_status,
             commands::openclaw::openclaw_get_skills_dir,
             commands::openclaw::openclaw_get_cli_command,
-            commands::openclaw_version::get_openclaw_version,
-            commands::openclaw_version::check_openclaw_updates,
             // Log commands
             commands::logs::get_log_dir,
             commands::logs::read_log_file,
