@@ -72,6 +72,8 @@
         "installRateLimitError": "インストールリクエストの制限を超過しました。ClawHub.aiからZIPをダウンロードし、\"{{path}}\" に展開することも可能です",
         "fetchTimeoutError": "スキルリストの取得がタイムアウトしました。ネットワークを確認してください。",
         "fetchRateLimitError": "スキルリスト取得のリクエスト制限を超過しました。後でお試しください。",
+        "timeoutError": "リクエストがタイムアウトしました。ネットワークを確認してください。",
+        "rateLimitError": "リクエスト制限を超過しました。後でお試しください。",
         "noBatchEnableTargets": "表示中のスキルはすべて有効です。",
         "noBatchDisableTargets": "表示中のスキルはすべて無効です。",
         "batchEnabled": "{{count}} 件のスキルを有効化しました。",

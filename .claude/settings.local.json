@@ -120,7 +120,8 @@
       "Bash(rustc --edition 2021 --crate-type lib src/core/storage/settings.rs 2>&1 | head -30)",
       "Bash(rustc --edition 2021 --crate-type lib src/commands/settings.rs 2>&1 | head -20)",
       "Bash(git rm:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(cd \"D:\\\\project\\\\ClawX\" && rm -f scripts/update-openclaw.mjs .github/workflows/check-openclaw-updates.yml docs/DEPENDENCY_MANAGEMENT.md)"
     ]
   }
 }

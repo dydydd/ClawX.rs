@@ -112,6 +112,8 @@ pub fn run() {
             commands::openclaw::openclaw_status,
             commands::openclaw::openclaw_get_skills_dir,
             commands::openclaw::openclaw_get_cli_command,
+            commands::openclaw_version::get_openclaw_version,
+            commands::openclaw_version::check_openclaw_updates,
             // Log commands
             commands::logs::get_log_dir,
             commands::logs::read_log_file,
@@ -129,6 +131,15 @@ pub fn run() {
             commands::oauth::oauth_cancel,
             commands::oauth::oauth_submit_code,
             commands::oauth::oauth_get_status,
+            // Update commands
+            commands::update::update_version,
+            commands::update::update_status,
+            commands::update::update_check,
+            commands::update::update_download,
+            commands::update::update_install,
+            commands::update::update_set_channel,
+            commands::update::update_set_auto_download,
+            commands::update::update_cancel_auto_install,
         ])
         .setup(|app| {
             // Logging is already initialized in AppState::new()

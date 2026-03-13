@@ -72,6 +72,8 @@
         "installRateLimitError": "安装请求过于频繁。您也可在 ClawHub.ai 下载该技能压缩包，解压到 \"{{path}}\"",
         "fetchTimeoutError": "获取技能列表超时，请检查网络。",
         "fetchRateLimitError": "获取技能列表请求过于频繁，请稍后再试。",
+        "timeoutError": "请求超时，请检查网络连接。",
+        "rateLimitError": "请求过于频繁，请稍后再试。",
         "noBatchEnableTargets": "当前可见技能都已启用。",
         "noBatchDisableTargets": "当前可见技能都已禁用。",
         "batchEnabled": "已启用 {{count}} 个技能。",

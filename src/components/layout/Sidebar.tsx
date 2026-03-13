@@ -152,16 +152,9 @@ export function Sidebar() {
 
   const openDevConsole = async () => {
     try {
-      const result = await hostApiFetch<{
-        success: boolean;
-        url?: string;
-        error?: string;
-      }>('/api/gateway/control-ui');
-      if (result.success && result.url) {
-        await open(result.url);
-      } else {
-        console.error('Failed to get Dev Console URL:', result.error);
-      }
+      // Gateway control UI runs on the default port
+      // Default Gateway port is 18789
+      await open('http://127.0.0.1:18789');
     } catch (err) {
       console.error('Error opening Dev Console:', err);
     }

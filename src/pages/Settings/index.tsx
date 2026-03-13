@@ -102,6 +102,12 @@ export function Settings() {
   const showCliTools = true;
   const [showLogs, setShowLogs] = useState(false);
   const [logContent, setLogContent] = useState('');
+  const [openclawVersion, setOpenclawVersion] = useState<{
+    current_version: string;
+    latest_version: string | null;
+    update_available: boolean;
+  } | null>(null);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
 
   const handleShowLogs = async () => {
     try {
@@ -122,6 +128,41 @@ export function Settings() {
       }
     } catch {
       // ignore
+    }
+  };
+
+  const loadOpenClawVersion = async () => {
+    try {
+      const version = await invokeIpc<{
+        current_version: string;
+        latest_version: string | null;
+        update_available: boolean;
+      }>('get_openclaw_version');
+      setOpenclawVersion(version);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCheckOpenClawUpdates = async () => {
+    setCheckingUpdates(true);
+    try {
+      const version = await invokeIpc<{
+        current_version: string;
+        latest_version: string | null;
+        update_available: boolean;
+      }>('check_openclaw_updates');
+      setOpenclawVersion(version);
+
+      if (version.update_available) {
+        toast.success(`OpenClaw ${version.latest_version} is available!`);
+      } else {
+        toast.success('OpenClaw is up to date');
+      }
+    } catch (error) {
+      toast.error(`Failed to check updates: ${toUserMessage(error)}`);
+    } finally {
+      setCheckingUpdates(false);
     }
   };
 
@@ -203,6 +244,11 @@ export function Settings() {
     return () => {
       if (unlisten) unlisten();
     };
+  }, []);
+
+  // Load OpenClaw version on mount
+  useEffect(() => {
+    loadOpenClawVersion();
   }, []);
 
   useEffect(() => {
@@ -514,6 +560,31 @@ export function Settings() {
                   </pre>
                 </div>
               )}
+
+              {/* OpenClaw Version */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <Label className="text-[15px] font-medium text-foreground">OpenClaw Version</Label>
+                  <p className="text-[13px] text-muted-foreground mt-1">
+                    {openclawVersion?.current_version || 'Loading...'}
+                    {openclawVersion?.latest_version && openclawVersion.update_available && (
+                      <span className="ml-2 text-green-600 dark:text-green-500">
+                        (Latest: {openclawVersion.latest_version})
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCheckOpenClawUpdates}
+                  disabled={checkingUpdates}
+                  className="rounded-full h-8 px-4 border-black/10 dark:border-white/10 bg-transparent hover:bg-black/5 dark:hover:bg-white/5"
+                >
+                  <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", checkingUpdates && "animate-spin")} />
+                  {checkingUpdates ? 'Checking...' : 'Check for Updates'}
+                </Button>
+              </div>
 
               <div className="flex items-center justify-between">
                 <div>
