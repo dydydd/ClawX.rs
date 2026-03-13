@@ -804,9 +804,9 @@ function AddProviderDialog({
   const supportsApiKey = typeInfo?.supportsApiKey ?? false;
   const vendorMap = new Map(vendors.map((vendor) => [vendor.id, vendor]));
   const selectedVendor = selectedType ? vendorMap.get(selectedType) : undefined;
-  const preferredOAuthMode = selectedVendor?.supportedAuthModes.includes('oauth_browser')
+  const preferredOAuthMode = selectedVendor?.supportedAuthModes?.includes('oauth_browser')
     ? 'oauth_browser'
-    : (selectedVendor?.supportedAuthModes.includes('oauth_device')
+    : (selectedVendor?.supportedAuthModes?.includes('oauth_device')
       ? 'oauth_device'
       : (selectedType === 'google' ? 'oauth_browser' : null));
   // Effective OAuth mode: pure OAuth providers, or dual-mode with oauth selected

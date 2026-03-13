@@ -87,6 +87,7 @@ pub struct ProviderAccountUpdates {
 
 /// Provider vendor info for frontend (matches ProviderTypeInfo)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderVendorInfo {
     #[serde(flatten)]
     pub type_info: ProviderTypeInfo,

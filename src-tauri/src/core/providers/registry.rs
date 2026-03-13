@@ -55,6 +55,7 @@ pub struct ProviderBackendConfig {
 
 /// Provider type info (UI-facing)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderTypeInfo {
     pub id: String,
     pub name: String,
@@ -85,6 +86,7 @@ pub struct ProviderTypeInfo {
 
 /// Provider vendor definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderDefinition {
     #[serde(flatten)]
     pub type_info: ProviderTypeInfo,
