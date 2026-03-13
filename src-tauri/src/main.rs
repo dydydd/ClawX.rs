@@ -171,16 +171,6 @@ pub fn run() {
                 AppState::new().await.expect("Failed to initialize app state")
             });
 
-            // Initialize cron store
-            let data_dir = dirs::data_local_dir()
-                .expect("Failed to get data directory")
-                .join("ClawX");
-            tauri::async_runtime::block_on(async {
-                if let Err(e) = commands::cron::init_cron_store(data_dir).await {
-                    tracing::error!("Failed to initialize cron store: {}", e);
-                }
-            });
-
             // Make state available to commands
             let logger = state.logger.clone();
             let gateway = state.gateway.clone();
@@ -188,6 +178,22 @@ pub fn run() {
             let whatsapp = state.whatsapp.clone();
             let device_oauth = state.device_oauth.clone();
             let browser_oauth = state.browser_oauth.clone();
+
+            // Initialize cron store
+            let data_dir = dirs::data_local_dir()
+                .expect("Failed to get data directory")
+                .join("ClawX");
+            let cron_store = tauri::async_runtime::block_on(async {
+                commands::cron::init_cron_store(data_dir).await
+            })
+            .expect("Failed to initialize cron store");
+
+            // Start cron scheduler
+            tauri::async_runtime::block_on(async {
+                commands::cron::init_cron_scheduler(cron_store, gateway.clone()).await
+            })
+            .expect("Failed to initialize cron scheduler");
+            tracing::info!("Cron scheduler started");
 
             app.manage(Arc::new(state));
             app.manage(logger);

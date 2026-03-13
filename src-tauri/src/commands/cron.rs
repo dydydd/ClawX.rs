@@ -1,14 +1,18 @@
 //! Cron job management IPC command handlers
 //!
 //! Provides local cron job storage and management using a JSON file.
+//! Includes a scheduler that automatically executes jobs when they're due.
 
 use anyhow::Result;
-use chrono::Utc;
+use chrono::{Datelike, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio::time::{interval, Duration};
+
+use crate::core::gateway::GatewayManager;
 
 /// Cron job definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +59,7 @@ pub struct CronJobCreateInput {
     pub message: String,
     pub schedule: String,
     pub enabled: Option<bool>,
+    pub target: Option<CronJobTarget>,
 }
 
 /// Input for updating a cron job
@@ -64,6 +69,83 @@ pub struct CronJobUpdateInput {
     pub message: Option<String>,
     pub schedule: Option<String>,
     pub enabled: Option<bool>,
+    pub target: Option<CronJobTarget>,
+}
+
+/// Calculate the next run time based on cron expression
+/// Simple implementation for common patterns
+fn calculate_next_run(cron_expr: &str) -> Option<String> {
+    let now = chrono::Local::now();
+    let next = now.clone();
+
+    // Parse cron expression (minute hour day_of_month month day_of_week)
+    let parts: Vec<&str> = cron_expr.split_whitespace().collect();
+    if parts.len() != 5 {
+        return None;
+    }
+
+    let minute = parts[0];
+    let hour = parts[1];
+    let _day_of_month = parts[2];
+    let _month = parts[3];
+    let day_of_week = parts[4];
+
+    // Simple implementation for common patterns
+    // Every minute: * * * * *
+    if minute == "*" && hour == "*" {
+        let next_time = now + chrono::Duration::minutes(1);
+        return Some(next_time.format("%Y-%m-%dT%H:%M:00Z").to_string());
+    }
+
+    // Every N minutes: */N * * * *
+    if minute.starts_with("*/") {
+        if let Ok(interval) = minute[2..].parse::<u32>() {
+            let current_minute = now.minute();
+            let next_minute = ((current_minute / interval) + 1) * interval;
+            let next_time = if next_minute >= 60 {
+                now.with_minute(0)?.with_hour((now.hour() + 1) % 24)?
+            } else {
+                now.with_minute(next_minute)?
+            };
+            return Some(next_time.format("%Y-%m-%dT%H:%M:00Z").to_string());
+        }
+    }
+
+    // Every hour: 0 * * * *
+    if hour == "*" && minute == "0" {
+        let next_time = now.with_minute(0)? + chrono::Duration::hours(1);
+        return Some(next_time.format("%Y-%m-%dT%H:%M:00Z").to_string());
+    }
+
+    // Daily at specific time: M H * * *
+    if hour != "*" && minute != "*" && _day_of_month == "*" && day_of_week == "*" {
+        if let (Ok(h), Ok(m)) = (hour.parse::<u32>(), minute.parse::<u32>()) {
+            let mut next_time = now.with_hour(h)?.with_minute(m)?;
+            if next_time <= now {
+                next_time = next_time + chrono::Duration::days(1);
+            }
+            return Some(next_time.format("%Y-%m-%dT%H:%M:00Z").to_string());
+        }
+    }
+
+    // Weekly on specific day: M H * * DOW
+    if day_of_week != "*" && hour != "*" && minute != "*" {
+        if let (Ok(h), Ok(m), Ok(dow)) = (
+            hour.parse::<u32>(),
+            minute.parse::<u32>(),
+            day_of_week.parse::<u32>(),
+        ) {
+            let current_dow = now.weekday().num_days_from_monday();
+            let days_ahead = (dow + 7 - current_dow) % 7;
+            let next_time = (now + chrono::Duration::days(days_ahead as i64))
+                .with_hour(h)?
+                .with_minute(m)?;
+            return Some(next_time.format("%Y-%m-%dT%H:%M:00Z").to_string());
+        }
+    }
+
+    // For other patterns, return None (not implemented)
+    None
 }
 
 /// Cron job store
@@ -116,17 +198,20 @@ impl CronStore {
             "expr": input.schedule
         });
 
+        // Calculate next run time
+        let next_run = calculate_next_run(&input.schedule);
+
         let job = CronJob {
             id: id.clone(),
             name: input.name,
             message: input.message,
             schedule,
-            target: None,
+            target: input.target,
             enabled: input.enabled.unwrap_or(true),
             created_at: now.clone(),
             updated_at: now,
             last_run: None,
-            next_run: None,
+            next_run,
         };
 
         // Insert job into map
@@ -154,14 +239,27 @@ impl CronStore {
                 if let Some(message) = input.message {
                     job.message = message;
                 }
-                if let Some(schedule) = input.schedule {
+                if let Some(schedule) = &input.schedule {
                     job.schedule = serde_json::json!({
                         "kind": "cron",
                         "expr": schedule
                     });
+                    // Update next run time when schedule changes
+                    job.next_run = calculate_next_run(schedule);
                 }
                 if let Some(enabled) = input.enabled {
                     job.enabled = enabled;
+                    // Recalculate next run when enabled status changes
+                    if enabled {
+                        if let Some(expr) = job.schedule.get("expr").and_then(|e| e.as_str()) {
+                            job.next_run = calculate_next_run(expr);
+                        }
+                    } else {
+                        job.next_run = None;
+                    }
+                }
+                if let Some(target) = input.target {
+                    job.target = Some(target);
                 }
                 job.updated_at = Utc::now().to_rfc3339();
 
@@ -204,6 +302,15 @@ impl CronStore {
                 job.enabled = enabled;
                 job.updated_at = Utc::now().to_rfc3339();
 
+                // Update next run time based on enabled status
+                if enabled {
+                    if let Some(expr) = job.schedule.get("expr").and_then(|e| e.as_str()) {
+                        job.next_run = calculate_next_run(expr);
+                    }
+                } else {
+                    job.next_run = None;
+                }
+
                 Some(job.clone())
             } else {
                 None
@@ -219,21 +326,16 @@ impl CronStore {
 
         updated
     }
-
-    pub async fn trigger(&self, _id: &str) -> Result<(), String> {
-        // TODO: Implement actual job execution
-        // For now, just update lastRun
-        Err("Job execution not implemented yet".to_string())
-    }
 }
 
 // Global cron store instance
 static CRON_STORE: std::sync::OnceLock<Arc<CronStore>> = std::sync::OnceLock::new();
 
-pub async fn init_cron_store(data_dir: PathBuf) -> Result<()> {
+pub async fn init_cron_store(data_dir: PathBuf) -> Result<Arc<CronStore>> {
     let store = CronStore::new(data_dir).await?;
-    let _ = CRON_STORE.set(Arc::new(store));
-    Ok(())
+    let arc_store = Arc::new(store);
+    let _ = CRON_STORE.set(arc_store.clone());
+    Ok(arc_store)
 }
 
 fn get_cron_store() -> Result<Arc<CronStore>, String> {
@@ -290,7 +392,298 @@ pub async fn cron_toggle(id: String, enabled: bool) -> Result<CronJob, String> {
 
 /// Trigger a cron job manually
 #[tauri::command]
-pub async fn cron_trigger(id: String) -> Result<(), String> {
+pub async fn cron_trigger(
+    id: String,
+    state: tauri::State<'_, Arc<crate::core::AppState>>,
+) -> Result<(), String> {
     let store = get_cron_store()?;
-    store.trigger(&id).await
+
+    // Get job details first
+    let job = {
+        let jobs = store.jobs.read().await;
+        jobs.get(&id).cloned()
+    };
+
+    let job = job.ok_or("Job not found")?;
+
+    // Execute the job via Gateway RPC
+    let start_time = std::time::Instant::now();
+    let execution_result = if let Some(target) = &job.target {
+        // Send to specific channel
+        tracing::info!(
+            "Executing cron job '{}' to channel {} ({})",
+            job.name,
+            target.channel_name,
+            target.channel_type
+        );
+
+        state.gateway
+            .rpc(
+                "chat.send",
+                Some(serde_json::json!({
+                    "sessionKey": format!("agent:main:{}", target.channel_type),
+                    "message": job.message,
+                    "deliver": true,
+                    "idempotencyKey": uuid::Uuid::new_v4().to_string(),
+                })),
+                30000,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    } else {
+        // Send to default session (main chat)
+        tracing::info!(
+            "Executing cron job '{}' to default session",
+            job.name
+        );
+
+        state.gateway
+            .rpc(
+                "chat.send",
+                Some(serde_json::json!({
+                    "sessionKey": "agent:main:main",
+                    "message": job.message,
+                    "deliver": false,
+                    "idempotencyKey": uuid::Uuid::new_v4().to_string(),
+                })),
+                30000,
+            )
+            .await
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    };
+
+    let duration = start_time.elapsed().as_millis() as u64;
+
+    // Update job with execution result
+    let updated = {
+        let mut jobs = store.jobs.write().await;
+
+        if let Some(job) = jobs.get_mut(&id) {
+            job.last_run = Some(CronJobLastRun {
+                time: Utc::now().to_rfc3339(),
+                success: execution_result.is_ok(),
+                error: execution_result.as_ref().err().cloned(),
+                duration: Some(duration),
+            });
+            job.updated_at = Utc::now().to_rfc3339();
+
+            // Update next run time
+            if job.enabled {
+                if let Some(expr) = job.schedule.get("expr").and_then(|e| e.as_str()) {
+                    job.next_run = calculate_next_run(expr);
+                }
+            }
+
+            tracing::info!(
+                "Cron job '{}' executed in {}ms, success={}",
+                job.name,
+                duration,
+                execution_result.is_ok()
+            );
+
+            Some(job.clone())
+        } else {
+            None
+        }
+    };
+
+    // Persist after releasing the lock
+    if updated.is_some() {
+        if let Err(e) = store.persist().await {
+            tracing::error!("Failed to persist cron jobs: {}", e);
+        }
+    }
+
+    execution_result
+}
+
+/// Cron job scheduler that periodically checks and executes due jobs
+pub struct CronScheduler {
+    store: Arc<CronStore>,
+    gateway: Arc<GatewayManager>,
+    running: Arc<RwLock<bool>>,
+}
+
+impl CronScheduler {
+    pub fn new(store: Arc<CronStore>, gateway: Arc<GatewayManager>) -> Self {
+        Self {
+            store,
+            gateway,
+            running: Arc::new(RwLock::new(false)),
+        }
+    }
+
+    /// Start the scheduler (runs in background)
+    pub async fn start(&self) {
+        let mut running = self.running.write().await;
+        if *running {
+            tracing::warn!("Cron scheduler is already running");
+            return;
+        }
+        *running = true;
+        drop(running);
+
+        let store = self.store.clone();
+        let gateway = self.gateway.clone();
+        let running_flag = self.running.clone();
+
+        tokio::spawn(async move {
+            tracing::info!("Cron scheduler started");
+
+            // Check every 30 seconds
+            let mut check_interval = interval(Duration::from_secs(30));
+
+            loop {
+                check_interval.tick().await;
+
+                // Check if scheduler is still running
+                {
+                    let is_running = running_flag.read().await;
+                    if !*is_running {
+                        tracing::info!("Cron scheduler stopped");
+                        break;
+                    }
+                }
+
+                // Get current time
+                let now = chrono::Local::now();
+                let now_str = now.format("%Y-%m-%dT%H:%M:00Z").to_string();
+
+                // Get all enabled jobs
+                let jobs = store.list().await;
+                let enabled_jobs: Vec<_> = jobs.into_iter().filter(|j| j.enabled).collect();
+
+                for job in enabled_jobs {
+                    // Check if job is due
+                    if let Some(next_run) = &job.next_run {
+                        if next_run <= &now_str {
+                            tracing::info!(
+                                "Executing scheduled cron job '{}' (id: {})",
+                                job.name,
+                                job.id
+                            );
+
+                            // Execute the job
+                            let start_time = std::time::Instant::now();
+                            let execution_result = if let Some(target) = &job.target {
+                                // Send to specific channel
+                                gateway
+                                    .rpc(
+                                        "chat.send",
+                                        Some(serde_json::json!({
+                                            "sessionKey": format!("agent:main:{}", target.channel_type),
+                                            "message": job.message,
+                                            "deliver": true,
+                                            "idempotencyKey": uuid::Uuid::new_v4().to_string(),
+                                        })),
+                                        30000,
+                                    )
+                                    .await
+                                    .map(|_| ())
+                                    .map_err(|e| e.to_string())
+                            } else {
+                                // Send to default session (main chat)
+                                gateway
+                                    .rpc(
+                                        "chat.send",
+                                        Some(serde_json::json!({
+                                            "sessionKey": "agent:main:main",
+                                            "message": job.message,
+                                            "deliver": false,
+                                            "idempotencyKey": uuid::Uuid::new_v4().to_string(),
+                                        })),
+                                        30000,
+                                    )
+                                    .await
+                                    .map(|_| ())
+                                    .map_err(|e| e.to_string())
+                            };
+
+                            let duration = start_time.elapsed().as_millis() as u64;
+
+                            // Update job with execution result
+                            let updated = {
+                                let mut jobs = store.jobs.write().await;
+
+                                if let Some(job) = jobs.get_mut(&job.id) {
+                                    job.last_run = Some(CronJobLastRun {
+                                        time: Utc::now().to_rfc3339(),
+                                        success: execution_result.is_ok(),
+                                        error: execution_result.as_ref().err().cloned(),
+                                        duration: Some(duration),
+                                    });
+                                    job.updated_at = Utc::now().to_rfc3339();
+
+                                    // Update next run time
+                                    if job.enabled {
+                                        if let Some(expr) =
+                                            job.schedule.get("expr").and_then(|e| e.as_str())
+                                        {
+                                            job.next_run = calculate_next_run(expr);
+                                        }
+                                    }
+
+                                    tracing::info!(
+                                        "Cron job '{}' executed in {}ms, success={}",
+                                        job.name,
+                                        duration,
+                                        execution_result.is_ok()
+                                    );
+
+                                    if let Err(e) = &execution_result {
+                                        tracing::error!(
+                                            "Cron job '{}' execution failed: {}",
+                                            job.name,
+                                            e
+                                        );
+                                    }
+
+                                    Some(job.clone())
+                                } else {
+                                    None
+                                }
+                            };
+
+                            // Persist after releasing the lock
+                            if updated.is_some() {
+                                if let Err(e) = store.persist().await {
+                                    tracing::error!("Failed to persist cron jobs: {}", e);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /// Stop the scheduler
+    pub async fn stop(&self) {
+        let mut running = self.running.write().await;
+        *running = false;
+        tracing::info!("Cron scheduler stop signal sent");
+    }
+}
+
+// Global scheduler instance
+static CRON_SCHEDULER: std::sync::OnceLock<Arc<CronScheduler>> = std::sync::OnceLock::new();
+
+/// Initialize and start the cron scheduler
+pub async fn init_cron_scheduler(
+    store: Arc<CronStore>,
+    gateway: Arc<GatewayManager>,
+) -> Result<()> {
+    let scheduler = Arc::new(CronScheduler::new(store, gateway));
+    scheduler.start().await;
+    let _ = CRON_SCHEDULER.set(scheduler);
+    Ok(())
+}
+
+/// Stop the cron scheduler
+pub async fn stop_cron_scheduler() {
+    if let Some(scheduler) = CRON_SCHEDULER.get() {
+        scheduler.stop().await;
+    }
 }

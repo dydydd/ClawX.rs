@@ -27,12 +27,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useCronStore } from '@/stores/cron';
+import { useChannelsStore } from '@/stores/channels';
 import { useGatewayStore } from '@/stores/gateway';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { formatRelativeTime, cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import type { CronJob, CronJobCreateInput, ScheduleType } from '@/types/cron';
+import type { CronJob, CronJobCreateInput, CronJobTarget, ScheduleType } from '@/types/cron';
 import { CHANNEL_ICONS, type ChannelType } from '@/types/channel';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -180,6 +188,7 @@ interface TaskDialogProps {
 function TaskDialog({ job, onClose, onSave }: TaskDialogProps) {
   const { t } = useTranslation('cron');
   const [saving, setSaving] = useState(false);
+  const channels = useChannelsStore((state) => state.channels);
 
   const [name, setName] = useState(job?.name || '');
   const [message, setMessage] = useState(job?.message || '');
@@ -197,6 +206,12 @@ function TaskDialog({ job, onClose, onSave }: TaskDialogProps) {
   const [customSchedule, setCustomSchedule] = useState('');
   const [useCustom, setUseCustom] = useState(false);
   const [enabled, setEnabled] = useState(job?.enabled ?? true);
+
+  // Target channel selection
+  const [selectedChannelId, setSelectedChannelId] = useState<string>(
+    job?.target?.channelId || 'none'
+  );
+
   const schedulePreview = estimateNextRun(useCustom ? customSchedule : schedule);
 
   const handleSubmit = async () => {
@@ -215,6 +230,20 @@ function TaskDialog({ job, onClose, onSave }: TaskDialogProps) {
       return;
     }
 
+    // Build target if a channel is selected
+    const target: CronJobTarget | undefined =
+      selectedChannelId && selectedChannelId !== 'none'
+        ? (() => {
+            const channel = channels.find((c) => c.id === selectedChannelId);
+            if (!channel) return undefined;
+            return {
+              channelType: channel.type,
+              channelId: channel.id,
+              channelName: channel.name,
+            };
+          })()
+        : undefined;
+
     setSaving(true);
     try {
       await onSave({
@@ -222,6 +251,7 @@ function TaskDialog({ job, onClose, onSave }: TaskDialogProps) {
         message: message.trim(),
         schedule: finalSchedule,
         enabled,
+        target,
       });
       toast.success(job ? t('toast.updated') : t('toast.created'));
       // Close dialog after successful save and toast
@@ -271,6 +301,40 @@ function TaskDialog({ job, onClose, onSave }: TaskDialogProps) {
               rows={3}
               className="rounded-xl font-mono text-[13px] bg-[#eeece3] dark:bg-muted border-black/10 dark:border-white/10 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary shadow-sm transition-all text-foreground placeholder:text-foreground/40 resize-none"
             />
+          </div>
+
+          {/* Target Channel */}
+          <div className="space-y-2.5">
+            <Label htmlFor="channel" className="text-[14px] text-foreground/80 font-bold">
+              {t('dialog.targetChannel', 'Target Channel')}
+            </Label>
+            <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
+              <SelectTrigger className="h-[44px] rounded-xl font-mono text-[13px] bg-[#eeece3] dark:bg-muted border-black/10 dark:border-white/10">
+                <SelectValue placeholder={t('dialog.selectChannel', 'Select a channel (optional)')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    <span>{t('dialog.noChannel', 'ClawX Chat (Default)')}</span>
+                  </div>
+                </SelectItem>
+                {channels.map((channel) => (
+                  <SelectItem key={channel.id} value={channel.id}>
+                    <div className="flex items-center gap-2">
+                      {CHANNEL_ICONS[channel.type as ChannelType]}
+                      <span>{channel.name}</span>
+                      {channel.status === 'connected' && (
+                        <span className="w-2 h-2 rounded-full bg-green-500" />
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[12px] text-muted-foreground/80">
+              {t('dialog.targetChannelDesc', 'Select where to send the task result. Default is ClawX chat.')}
+            </p>
           </div>
 
           {/* Schedule */}
@@ -504,6 +568,7 @@ function CronJobCard({ job, onToggle, onEdit, onDelete, onTrigger }: CronJobCard
 export function Cron() {
   const { t } = useTranslation('cron');
   const { jobs, loading, error, fetchJobs, createJob, updateJob, toggleJob, deleteJob, triggerJob } = useCronStore();
+  const { channels, fetchChannels } = useChannelsStore();
   const gatewayStatus = useGatewayStore((state) => state.status);
   const [showDialog, setShowDialog] = useState(false);
   const [editingJob, setEditingJob] = useState<CronJob | undefined>();
@@ -511,12 +576,13 @@ export function Cron() {
 
   const isGatewayRunning = gatewayStatus.state === 'running';
 
-  // Fetch jobs on mount
+  // Fetch jobs and channels on mount
   useEffect(() => {
     if (isGatewayRunning) {
       fetchJobs();
+      fetchChannels();
     }
-  }, [fetchJobs, isGatewayRunning]);
+  }, [fetchJobs, fetchChannels, isGatewayRunning]);
 
   // Statistics
   const safeJobs = Array.isArray(jobs) ? jobs : [];

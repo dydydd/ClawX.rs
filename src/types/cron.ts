@@ -51,7 +51,7 @@ export interface CronJob {
 
 /**
  * Input for creating a cron job from the UI.
- * No target/delivery — UI-created tasks push results to the ClawX chat page.
+ * target is optional - if not provided, results go to the ClawX chat page.
  * Tasks created via external channels are handled directly by the Gateway.
  */
 export interface CronJobCreateInput {
@@ -59,6 +59,7 @@ export interface CronJobCreateInput {
   message: string;
   schedule: string;
   enabled?: boolean;
+  target?: CronJobTarget;
 }
 
 /**
@@ -69,6 +70,7 @@ export interface CronJobUpdateInput {
   message?: string;
   schedule?: string;
   enabled?: boolean;
+  target?: CronJobTarget;
 }
 
 /**
