@@ -1,4 +1,4 @@
-import { hostApiFetch } from '@/lib/host-api';
+import { invokeIpc } from '@/lib/api-client';
 import type {
   ProviderAccount,
   ProviderType,
@@ -20,18 +20,40 @@ export interface ProviderListItem {
 }
 
 export async function fetchProviderSnapshot(): Promise<ProviderSnapshot> {
-  const [accounts, statuses, vendors, defaultInfo] = await Promise.all([
-    hostApiFetch<ProviderAccount[]>('/api/provider-accounts').catch(() => []),
-    hostApiFetch<ProviderWithKeyInfo[]>('/api/providers').catch(() => []),
-    hostApiFetch<ProviderVendorInfo[]>('/api/provider-vendors').catch(() => []),
-    hostApiFetch<{ accountId: string | null }>('/api/provider-accounts/default').catch(() => ({ accountId: null })),
+  const [accounts, vendors, defaultAccountId] = await Promise.all([
+    invokeIpc<ProviderAccount[]>('list_provider_accounts').catch(() => []),
+    invokeIpc<ProviderVendorInfo[]>('list_provider_vendors').catch(() => []),
+    invokeIpc<string | null>('get_default_provider_account').catch(() => null),
   ]);
+
+  // Build statuses array with key info
+  const statuses: ProviderWithKeyInfo[] = await Promise.all(
+    (accounts || []).map(async (account) => {
+      const hasKey = await invokeIpc<boolean>('has_provider_api_key', account.id).catch(() => false);
+      const keyMasked = hasKey ? await invokeIpc<string>('get_provider_api_key_masked', account.id).catch(() => '') : '';
+
+      return {
+        id: account.id,
+        type: account.vendorId,
+        name: account.label || account.vendorId,
+        hasKey,
+        keyMasked,
+        baseUrl: account.baseUrl,
+        model: account.model,
+        fallbackModels: account.fallbackModels,
+        fallbackProviderIds: account.fallbackAccountIds,
+        enabled: account.enabled,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt,
+      };
+    })
+  );
 
   return {
     accounts: Array.isArray(accounts) ? accounts : [],
     statuses: Array.isArray(statuses) ? statuses : [],
     vendors: Array.isArray(vendors) ? vendors : [],
-    defaultAccountId: defaultInfo?.accountId ?? null,
+    defaultAccountId: defaultAccountId ?? null,
   };
 }
 

@@ -223,10 +223,13 @@ function TaskDialog({ job, onClose, onSave }: TaskDialogProps) {
         schedule: finalSchedule,
         enabled,
       });
-      onClose();
       toast.success(job ? t('toast.updated') : t('toast.created'));
+      // Close dialog after successful save and toast
+      onClose();
     } catch (err) {
+      console.error('Failed to save cron job:', err);
       toast.error(String(err));
+      // Don't close dialog on error, keep it open so user can retry
     } finally {
       setSaving(false);
     }

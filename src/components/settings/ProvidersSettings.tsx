@@ -1302,7 +1302,7 @@ function AddProviderDialog({
                               <Button
                                 variant="secondary"
                                 className="w-full rounded-full h-[42px] font-semibold"
-                                onClick={() => invokeIpc('shell:openExternal', oauthData.authorizationUrl)}
+                                onClick={() => invokeIpc('shell:open_external', oauthData.authorizationUrl)}
                               >
                                 <ExternalLink className="h-4 w-4 mr-2" />
                                 Open Authorization Page
@@ -1358,7 +1358,7 @@ function AddProviderDialog({
                               <Button
                                 variant="secondary"
                                 className="w-full rounded-full h-[42px] font-semibold"
-                                onClick={() => invokeIpc('shell:openExternal', oauthData.verificationUri)}
+                                onClick={() => invokeIpc('shell:open_external', oauthData.verificationUri)}
                               >
                                 <ExternalLink className="h-4 w-4 mr-2" />
                                 {t('aiProviders.oauth.openLoginPage')}

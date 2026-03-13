@@ -58,8 +58,10 @@ export function Chat() {
   }, [cleanupEmptySession]);
 
   useEffect(() => {
-    void fetchAgents();
-  }, [fetchAgents]);
+    if (isGatewayRunning) {
+      void fetchAgents();
+    }
+  }, [fetchAgents, isGatewayRunning]);
 
   // Update timestamp when sending starts
   useEffect(() => {

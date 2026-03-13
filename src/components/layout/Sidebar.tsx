@@ -172,8 +172,10 @@ export function Sidebar() {
   }, []);
 
   useEffect(() => {
-    void fetchAgents();
-  }, [fetchAgents]);
+    if (isGatewayRunning) {
+      void fetchAgents();
+    }
+  }, [fetchAgents, isGatewayRunning]);
 
   const agentNameById = useMemo(
     () => Object.fromEntries((agents || []).map((agent) => [agent.id, agent.name])),

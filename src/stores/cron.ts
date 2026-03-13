@@ -1,16 +1,16 @@
 /**
  * Cron State Store
- * Manages scheduled task state
+ * Manages scheduled task state using Tauri IPC commands
  */
 import { create } from 'zustand';
-import { hostApiFetch } from '@/lib/host-api';
+import { invokeIpc } from '@/lib/api-client';
 import type { CronJob, CronJobCreateInput, CronJobUpdateInput } from '../types/cron';
 
 interface CronState {
   jobs: CronJob[];
   loading: boolean;
   error: string | null;
-  
+
   // Actions
   fetchJobs: () => Promise<void>;
   createJob: (input: CronJobCreateInput) => Promise<CronJob>;
@@ -21,28 +21,26 @@ interface CronState {
   setJobs: (jobs: CronJob[]) => void;
 }
 
-export const useCronStore = create<CronState>((set) => ({
+export const useCronStore = create<CronState>((set, get) => ({
   jobs: [],
   loading: false,
   error: null,
-  
+
   fetchJobs: async () => {
     set({ loading: true, error: null });
-    
+
     try {
-      const result = await hostApiFetch<CronJob[]>('/api/cron/jobs');
-      set({ jobs: result, loading: false });
+      const jobs = await invokeIpc<CronJob[]>('cron:list');
+      set({ jobs: jobs || [], loading: false });
     } catch (error) {
+      console.error('Failed to fetch cron jobs:', error);
       set({ error: String(error), loading: false });
     }
   },
-  
+
   createJob: async (input) => {
     try {
-      const job = await hostApiFetch<CronJob>('/api/cron/jobs', {
-        method: 'POST',
-        body: JSON.stringify(input),
-      });
+      const job = await invokeIpc<CronJob>('cron:create', { input });
       set((state) => ({ jobs: [...state.jobs, job] }));
       return job;
     } catch (error) {
@@ -50,16 +48,13 @@ export const useCronStore = create<CronState>((set) => ({
       throw error;
     }
   },
-  
+
   updateJob: async (id, input) => {
     try {
-      await hostApiFetch(`/api/cron/jobs/${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        body: JSON.stringify(input),
-      });
+      const updatedJob = await invokeIpc<CronJob>('cron:update', { id, input });
       set((state) => ({
         jobs: state.jobs.map((job) =>
-          job.id === id ? { ...job, ...input, updatedAt: new Date().toISOString() } : job
+          job.id === id ? updatedJob : job
         ),
       }));
     } catch (error) {
@@ -67,12 +62,10 @@ export const useCronStore = create<CronState>((set) => ({
       throw error;
     }
   },
-  
+
   deleteJob: async (id) => {
     try {
-      await hostApiFetch(`/api/cron/jobs/${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
+      await invokeIpc('cron:delete', { id });
       set((state) => ({
         jobs: state.jobs.filter((job) => job.id !== id),
       }));
@@ -81,16 +74,13 @@ export const useCronStore = create<CronState>((set) => ({
       throw error;
     }
   },
-  
+
   toggleJob: async (id, enabled) => {
     try {
-      await hostApiFetch('/api/cron/toggle', {
-        method: 'POST',
-        body: JSON.stringify({ id, enabled }),
-      });
+      const updatedJob = await invokeIpc<CronJob>('cron:toggle', { id, enabled });
       set((state) => ({
         jobs: state.jobs.map((job) =>
-          job.id === id ? { ...job, enabled } : job
+          job.id === id ? updatedJob : job
         ),
       }));
     } catch (error) {
@@ -98,26 +88,17 @@ export const useCronStore = create<CronState>((set) => ({
       throw error;
     }
   },
-  
+
   triggerJob: async (id) => {
     try {
-      const result = await hostApiFetch('/api/cron/trigger', {
-        method: 'POST',
-        body: JSON.stringify({ id }),
-      });
-      console.log('Cron trigger result:', result);
+      await invokeIpc('cron:trigger', { id });
       // Refresh jobs after trigger to update lastRun/nextRun state
-      try {
-        const jobs = await hostApiFetch<CronJob[]>('/api/cron/jobs');
-        set({ jobs });
-      } catch {
-        // Ignore refresh error
-      }
+      await get().fetchJobs();
     } catch (error) {
       console.error('Failed to trigger cron job:', error);
       throw error;
     }
   },
-  
+
   setJobs: (jobs) => set({ jobs }),
 }));

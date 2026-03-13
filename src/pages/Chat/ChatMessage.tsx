@@ -433,7 +433,7 @@ function FileIcon({ mimeType, className }: { mimeType: string; className?: strin
 function FileCard({ file }: { file: AttachedFileMeta }) {
   const handleOpen = useCallback(() => {
     if (file.filePath) {
-      invokeIpc('shell:openPath', file.filePath);
+      invokeIpc('shell:open_path', file.filePath);
     }
   }, [file.filePath]);
 
@@ -548,7 +548,7 @@ function ImageLightbox({
 
   const handleShowInFolder = useCallback(() => {
     if (filePath) {
-      invokeIpc('shell:showItemInFolder', filePath);
+      invokeIpc('shell:show_item_in_folder', filePath);
     }
   }, [filePath]);
 

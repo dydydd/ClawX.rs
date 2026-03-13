@@ -42,15 +42,21 @@ export function Agents() {
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null);
   const [agentToDelete, setAgentToDelete] = useState<AgentSummary | null>(null);
 
+  const isGatewayRunning = gatewayStatus.state === 'running';
+
   useEffect(() => {
-    void Promise.all([fetchAgents(), fetchChannels()]);
-  }, [fetchAgents, fetchChannels]);
+    if (isGatewayRunning) {
+      void Promise.all([fetchAgents(), fetchChannels()]);
+    }
+  }, [fetchAgents, fetchChannels, isGatewayRunning]);
   const activeAgent = useMemo(
     () => agents.find((agent) => agent.id === activeAgentId) ?? null,
     [activeAgentId, agents],
   );
   const handleRefresh = () => {
-    void Promise.all([fetchAgents(), fetchChannels()]);
+    if (isGatewayRunning) {
+      void Promise.all([fetchAgents(), fetchChannels()]);
+    }
   };
 
   if (loading) {

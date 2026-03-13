@@ -78,7 +78,7 @@ function SkillDetailDialog({ skill, isOpen, onClose, onToggle, onUninstall }: Sk
 
   const handleOpenClawhub = async () => {
     if (!skill?.slug) return;
-    await invokeIpc('shell:openExternal', `https://clawhub.ai/s/${skill.slug}`);
+    await invokeIpc('shell:open_external', `https://clawhub.ai/s/${skill.slug}`);
   };
 
   const handleOpenEditor = async () => {
@@ -454,18 +454,11 @@ export function Skills() {
 
   const handleOpenSkillsFolder = useCallback(async () => {
     try {
-      const skillsDir = await invokeIpc<string>('openclaw:getSkillsDir');
+      const skillsDir = await invokeIpc<string>('openclaw:get_skills_dir');
       if (!skillsDir) {
         throw new Error('Skills directory not available');
       }
-      const result = await invokeIpc<string>('shell:openPath', skillsDir);
-      if (result) {
-        if (result.toLowerCase().includes('no such file') || result.toLowerCase().includes('not found') || result.toLowerCase().includes('failed to open')) {
-          toast.error(t('toast.failedFolderNotFound'));
-        } else {
-          throw new Error(result);
-        }
-      }
+      await invokeIpc('shell:show_item_in_folder', skillsDir);
     } catch (err) {
       toast.error(t('toast.failedOpenFolder') + ': ' + String(err));
     }
@@ -474,7 +467,7 @@ export function Skills() {
   const [skillsDirPath, setSkillsDirPath] = useState('~/.openclaw/skills');
 
   useEffect(() => {
-    invokeIpc<string>('openclaw:getSkillsDir')
+    invokeIpc<string>('openclaw:get_skills_dir')
       .then((dir) => setSkillsDirPath(dir as string))
       .catch(console.error);
   }, []);
@@ -785,7 +778,7 @@ export function Skills() {
                     <div
                       key={skill.slug}
                       className="group flex flex-row items-center justify-between py-3.5 px-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer border-b border-black/5 dark:border-white/5 last:border-0"
-                      onClick={() => invokeIpc('shell:openExternal', `https://clawhub.ai/s/${skill.slug}`)}
+                      onClick={() => invokeIpc('shell:open_external', `https://clawhub.ai/s/${skill.slug}`)}
                     >
                       <div className="flex items-start gap-4 flex-1 overflow-hidden pr-4">
                         <div className="h-10 w-10 shrink-0 flex items-center justify-center text-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl overflow-hidden">

@@ -1469,7 +1469,7 @@ function ProviderContent({
                         <Button
                           variant="secondary"
                           className="w-full"
-                          onClick={() => invokeIpc('shell:openExternal', oauthData.authorizationUrl)}
+                          onClick={() => invokeIpc('shell:open_external', oauthData.authorizationUrl)}
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />
                           Open Authorization Page
@@ -1523,7 +1523,7 @@ function ProviderContent({
                         <Button
                           variant="secondary"
                           className="w-full"
-                          onClick={() => invokeIpc('shell:openExternal', oauthData.verificationUri)}
+                          onClick={() => invokeIpc('shell:open_external', oauthData.verificationUri)}
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />
                           Open Login Page

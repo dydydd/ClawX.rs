@@ -87,7 +87,7 @@ export async function onIpcEvent<T>(
  */
 export async function openExternal(url: string): Promise<void> {
   if (isTauri()) {
-    await invokeIpc('shell:openExternal', { url });
+    await invokeIpc('shell:open_external', { url });
   } else if (isElectron()) {
     await window.electron.openExternal(url);
   } else {

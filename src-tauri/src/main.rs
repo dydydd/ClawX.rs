@@ -92,9 +92,12 @@ pub fn run() {
             commands::skills::clawhub_list_installed,
             commands::skills::open_skill_readme,
             // Cron commands
-            commands::cron::list_cron_jobs,
-            commands::cron::create_cron_job,
-            commands::cron::delete_cron_job,
+            commands::cron::cron_list,
+            commands::cron::cron_create,
+            commands::cron::cron_update,
+            commands::cron::cron_delete,
+            commands::cron::cron_toggle,
+            commands::cron::cron_trigger,
             // App commands
             commands::app::get_app_info,
             commands::app::get_platform,
@@ -104,6 +107,7 @@ pub fn run() {
             commands::window::close_window,
             // Shell commands
             commands::shell::open_external,
+            commands::shell::open_path,
             commands::shell::show_item_in_folder,
             // File commands
             commands::files::read_file,
@@ -111,7 +115,7 @@ pub fn run() {
             // OpenClaw commands
             commands::openclaw::openclaw_status,
             commands::openclaw::openclaw_get_skills_dir,
-            commands::openclaw::openclaw_get_cli_command,
+            commands::openclaw::openclaw_getCliCommand,
             commands::openclaw_version::get_openclaw_version,
             commands::openclaw_version::check_openclaw_updates,
             // Log commands
@@ -165,6 +169,16 @@ pub fn run() {
             // Initialize application state (blocking, since setup is not async)
             let state = tauri::async_runtime::block_on(async {
                 AppState::new().await.expect("Failed to initialize app state")
+            });
+
+            // Initialize cron store
+            let data_dir = dirs::data_local_dir()
+                .expect("Failed to get data directory")
+                .join("ClawX");
+            tauri::async_runtime::block_on(async {
+                if let Err(e) = commands::cron::init_cron_store(data_dir).await {
+                    tracing::error!("Failed to initialize cron store: {}", e);
+                }
             });
 
             // Make state available to commands

@@ -119,7 +119,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
 
     // Sync auto-download preference to the main process
     if (autoDownloadUpdate) {
-      invokeIpc('update:setAutoDownload', true).catch(() => {});
+      invokeIpc('update:set_auto_download', true).catch(() => {});
     }
 
     // Auto-check for updates on startup (respects user toggle)
@@ -193,7 +193,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
 
   cancelAutoInstall: async () => {
     try {
-      await invokeIpc('update:cancelAutoInstall');
+      await invokeIpc('update:cancel_auto_install');
     } catch (error) {
       console.error('Failed to cancel auto-install:', error);
     }
@@ -201,7 +201,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
 
   setChannel: async (channel) => {
     try {
-      await invokeIpc('update:setChannel', channel);
+      await invokeIpc('update:set_channel', channel);
     } catch (error) {
       console.error('Failed to set update channel:', error);
     }
@@ -209,7 +209,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
 
   setAutoDownload: async (enable) => {
     try {
-      await invokeIpc('update:setAutoDownload', enable);
+      await invokeIpc('update:set_auto_download', enable);
     } catch (error) {
       console.error('Failed to set auto-download:', error);
     }

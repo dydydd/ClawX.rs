@@ -1,9 +1,9 @@
 /**
  * Skills State Store
- * Manages skill/plugin state
+ * Manages skill/plugin state using Tauri IPC commands
  */
 import { create } from 'zustand';
-import { hostApiFetch } from '@/lib/host-api';
+import { invokeIpc } from '@/lib/api-client';
 import { AppError, normalizeAppError } from '@/lib/error-model';
 import { useGatewayStore } from './gateway';
 import type { Skill, MarketplaceSkill } from '../types/skill';
@@ -90,11 +90,11 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
       // 1. Fetch from Gateway (running skills)
       const gatewayData = await useGatewayStore.getState().rpc<GatewaySkillsStatusResult>('skills.status');
 
-      // 2. Fetch from ClawHub (installed on disk)
-      const clawhubResult = await hostApiFetch<{ success: boolean; results?: ClawHubListResult[]; error?: string }>('/api/clawhub/list');
+      // 2. Fetch installed skills from ClawHub via IPC
+      const clawhubResult = await invokeIpc<{ success: boolean; results?: ClawHubListResult[]; error?: string }>('clawhub_list_installed');
 
-      // 3. Fetch configurations directly from Electron (since Gateway doesn't return them)
-      const configResult = await hostApiFetch<Record<string, { apiKey?: string; env?: Record<string, string> }>>('/api/skills/configs');
+      // 3. Fetch configurations via IPC
+      const configResult = await invokeIpc<{ success: boolean; results?: Record<string, { apiKey?: string; env?: Record<string, string> }>; error?: string }>('get_all_skill_configs');
 
       let combinedSkills: Skill[] = [];
       const currentSkills = get().skills;
@@ -103,7 +103,8 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
       if (gatewayData.skills) {
         combinedSkills = gatewayData.skills.map((s: GatewaySkillStatus) => {
           // Merge with direct config if available
-          const directConfig = configResult[s.skillKey] || {};
+          const configs = configResult?.results || {};
+          const directConfig = configs[s.skillKey] || {};
 
           return {
             id: s.skillKey,
@@ -128,11 +129,12 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
       }
 
       // Merge with ClawHub results
-      if (clawhubResult.success && clawhubResult.results) {
+      if (clawhubResult?.success && clawhubResult.results) {
+        const configs = configResult?.results || {};
         clawhubResult.results.forEach((cs: ClawHubListResult) => {
           const existing = combinedSkills.find(s => s.id === cs.slug);
           if (!existing) {
-            const directConfig = configResult[cs.slug] || {};
+            const directConfig = configs[cs.slug] || {};
             combinedSkills.push({
               id: cs.slug,
               slug: cs.slug,
@@ -161,10 +163,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
   searchSkills: async (query: string) => {
     set({ searching: true, searchError: null });
     try {
-      const result = await hostApiFetch<{ success: boolean; results?: MarketplaceSkill[]; error?: string }>('/api/clawhub/search', {
-        method: 'POST',
-        body: JSON.stringify({ query }),
-      });
+      const result = await invokeIpc<{ success: boolean; results?: MarketplaceSkill[]; error?: string }>('search_skills', { query });
       if (result.success) {
         set({ searchResults: result.results || [] });
       } else {
@@ -184,10 +183,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
   installSkill: async (slug: string, version?: string) => {
     set((state) => ({ installing: { ...state.installing, [slug]: true } }));
     try {
-      const result = await hostApiFetch<{ success: boolean; error?: string }>('/api/clawhub/install', {
-        method: 'POST',
-        body: JSON.stringify({ slug, version }),
-      });
+      const result = await invokeIpc<{ success: boolean; error?: string }>('install_skill', { slug, version });
       if (!result.success) {
         const appError = normalizeAppError(new Error(result.error || 'Install failed'), {
           module: 'skills',
@@ -212,10 +208,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
   uninstallSkill: async (slug: string) => {
     set((state) => ({ installing: { ...state.installing, [slug]: true } }));
     try {
-      const result = await hostApiFetch<{ success: boolean; error?: string }>('/api/clawhub/uninstall', {
-        method: 'POST',
-        body: JSON.stringify({ slug }),
-      });
+      const result = await invokeIpc<{ success: boolean; error?: string }>('uninstall_skill', { slug });
       if (!result.success) {
         throw new Error(result.error || 'Uninstall failed');
       }

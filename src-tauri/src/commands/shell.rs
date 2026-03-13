@@ -10,6 +10,22 @@ pub async fn open_external(app: tauri::AppHandle, url: String) -> Result<(), Str
         .map_err(|e| format!("Failed to open URL: {}", e))
 }
 
+/// Open a file or folder with the system default application
+#[tauri::command]
+pub async fn open_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    let path = std::path::Path::new(&path);
+
+    if !path.exists() {
+        return Err(format!("Path does not exist: {}", path.display()));
+    }
+
+    // Use Tauri shell to open the path with the default application
+    let path_string = path.display().to_string();
+    app.shell()
+        .open(&path_string, None)
+        .map_err(|e| format!("Failed to open path: {}", e))
+}
+
 /// Show a file or folder in the file manager
 #[tauri::command]
 pub async fn show_item_in_folder(path: String) -> Result<(), String> {

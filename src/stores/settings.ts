@@ -1,11 +1,11 @@
 /**
  * Settings State Store
- * Manages application settings
+ * Manages application settings using Tauri IPC commands
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import i18n from '@/i18n';
-import { hostApiFetch } from '@/lib/host-api';
+import { invokeIpc } from '@/lib/api-client';
 
 type Theme = 'light' | 'dark' | 'system';
 type UpdateChannel = 'stable' | 'beta' | 'dev';
@@ -98,10 +98,10 @@ export const useSettingsStore = create<SettingsState>()(
 
       init: async () => {
         try {
-          const settings = await hostApiFetch<Partial<typeof defaultSettings>>('/api/settings');
+          const settings = await invokeIpc<Record<string, unknown>>('get_all_settings');
           set((state) => ({ ...state, ...settings }));
           if (settings.language) {
-            i18n.changeLanguage(settings.language);
+            i18n.changeLanguage(settings.language as string);
           }
         } catch {
           // Keep renderer-persisted settings as a fallback when the main
@@ -109,57 +109,91 @@ export const useSettingsStore = create<SettingsState>()(
         }
       },
 
-      setTheme: (theme) => set({ theme }),
+      setTheme: (theme) => {
+        set({ theme });
+        void invokeIpc('set_setting', { key: 'theme', value: theme }).catch(() => {});
+      },
       setLanguage: (language) => {
         i18n.changeLanguage(language);
         set({ language });
-        void hostApiFetch('/api/settings/language', {
-          method: 'PUT',
-          body: JSON.stringify({ value: language }),
-        }).catch(() => { });
+        void invokeIpc('set_setting', { key: 'language', value: language }).catch(() => {});
       },
-      setStartMinimized: (startMinimized) => set({ startMinimized }),
+      setStartMinimized: (startMinimized) => {
+        set({ startMinimized });
+        void invokeIpc('set_setting', { key: 'startMinimized', value: startMinimized }).catch(() => {});
+      },
       setLaunchAtStartup: (launchAtStartup) => {
         set({ launchAtStartup });
-        void hostApiFetch('/api/settings/launchAtStartup', {
-          method: 'PUT',
-          body: JSON.stringify({ value: launchAtStartup }),
-        }).catch(() => { });
+        void invokeIpc('set_setting', { key: 'launchAtStartup', value: launchAtStartup }).catch(() => {});
       },
       setTelemetryEnabled: (telemetryEnabled) => {
         set({ telemetryEnabled });
-        void hostApiFetch('/api/settings/telemetryEnabled', {
-          method: 'PUT',
-          body: JSON.stringify({ value: telemetryEnabled }),
-        }).catch(() => { });
+        void invokeIpc('set_setting', { key: 'telemetryEnabled', value: telemetryEnabled }).catch(() => {});
       },
       setGatewayAutoStart: (gatewayAutoStart) => {
         set({ gatewayAutoStart });
-        void hostApiFetch('/api/settings/gatewayAutoStart', {
-          method: 'PUT',
-          body: JSON.stringify({ value: gatewayAutoStart }),
-        }).catch(() => { });
+        void invokeIpc('set_setting', { key: 'gatewayAutoStart', value: gatewayAutoStart }).catch(() => {});
       },
       setGatewayPort: (gatewayPort) => {
         set({ gatewayPort });
-        void hostApiFetch('/api/settings/gatewayPort', {
-          method: 'PUT',
-          body: JSON.stringify({ value: gatewayPort }),
-        }).catch(() => { });
+        void invokeIpc('set_setting', { key: 'gatewayPort', value: gatewayPort }).catch(() => {});
       },
-      setProxyEnabled: (proxyEnabled) => set({ proxyEnabled }),
-      setProxyServer: (proxyServer) => set({ proxyServer }),
-      setProxyHttpServer: (proxyHttpServer) => set({ proxyHttpServer }),
-      setProxyHttpsServer: (proxyHttpsServer) => set({ proxyHttpsServer }),
-      setProxyAllServer: (proxyAllServer) => set({ proxyAllServer }),
-      setProxyBypassRules: (proxyBypassRules) => set({ proxyBypassRules }),
-      setUpdateChannel: (updateChannel) => set({ updateChannel }),
-      setAutoCheckUpdate: (autoCheckUpdate) => set({ autoCheckUpdate }),
-      setAutoDownloadUpdate: (autoDownloadUpdate) => set({ autoDownloadUpdate }),
-      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
-      setDevModeUnlocked: (devModeUnlocked) => set({ devModeUnlocked }),
-      markSetupComplete: () => set({ setupComplete: true }),
-      resetSettings: () => set(defaultSettings),
+      setProxyEnabled: (proxyEnabled) => {
+        set({ proxyEnabled });
+        void invokeIpc('set_setting', { key: 'proxyEnabled', value: proxyEnabled }).catch(() => {});
+      },
+      setProxyServer: (proxyServer) => {
+        set({ proxyServer });
+        void invokeIpc('set_setting', { key: 'proxyServer', value: proxyServer }).catch(() => {});
+      },
+      setProxyHttpServer: (proxyHttpServer) => {
+        set({ proxyHttpServer });
+        void invokeIpc('set_setting', { key: 'proxyHttpServer', value: proxyHttpServer }).catch(() => {});
+      },
+      setProxyHttpsServer: (proxyHttpsServer) => {
+        set({ proxyHttpsServer });
+        void invokeIpc('set_setting', { key: 'proxyHttpsServer', value: proxyHttpsServer }).catch(() => {});
+      },
+      setProxyAllServer: (proxyAllServer) => {
+        set({ proxyAllServer });
+        void invokeIpc('set_setting', { key: 'proxyAllServer', value: proxyAllServer }).catch(() => {});
+      },
+      setProxyBypassRules: (proxyBypassRules) => {
+        set({ proxyBypassRules });
+        void invokeIpc('set_setting', { key: 'proxyBypassRules', value: proxyBypassRules }).catch(() => {});
+      },
+      setUpdateChannel: (updateChannel) => {
+        set({ updateChannel });
+        void invokeIpc('set_setting', { key: 'updateChannel', value: updateChannel }).catch(() => {});
+      },
+      setAutoCheckUpdate: (autoCheckUpdate) => {
+        set({ autoCheckUpdate });
+        void invokeIpc('set_setting', { key: 'autoCheckUpdate', value: autoCheckUpdate }).catch(() => {});
+      },
+      setAutoDownloadUpdate: (autoDownloadUpdate) => {
+        set({ autoDownloadUpdate });
+        void invokeIpc('set_setting', { key: 'autoDownloadUpdate', value: autoDownloadUpdate }).catch(() => {});
+      },
+      setSidebarCollapsed: (sidebarCollapsed) => {
+        set({ sidebarCollapsed });
+        void invokeIpc('set_setting', { key: 'sidebarCollapsed', value: sidebarCollapsed }).catch(() => {});
+      },
+      setDevModeUnlocked: (devModeUnlocked) => {
+        set({ devModeUnlocked });
+        void invokeIpc('set_setting', { key: 'devModeUnlocked', value: devModeUnlocked }).catch(() => {});
+      },
+      markSetupComplete: () => {
+        set({ setupComplete: true });
+        void invokeIpc('set_setting', { key: 'setupComplete', value: true }).catch(() => {});
+      },
+      resetSettings: async () => {
+        try {
+          const settings = await invokeIpc<Record<string, unknown>>('reset_settings');
+          set((state) => ({ ...state, ...settings }));
+        } catch {
+          set(defaultSettings);
+        }
+      },
     }),
     {
       name: 'clawx-settings',
