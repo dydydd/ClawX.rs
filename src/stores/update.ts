@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 import { useSettingsStore } from './settings';
 import { invokeIpc } from '@/lib/api-client';
+import { listen } from '@tauri-apps/api/event';
 
 export interface UpdateInfo {
   version: string;
@@ -91,8 +92,8 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
     // Listen for update events
     // Single source of truth: listen only to update:status-changed
     // (sent by AppUpdater.updateStatus() in the main process)
-    window.electron.ipcRenderer.on('update:status-changed', (data) => {
-      const status = data as {
+    const unlistenStatus = await listen('update:status-changed', (event) => {
+      const status = event.payload as {
         status: UpdateStatus;
         info?: UpdateInfo;
         progress?: ProgressInfo;
@@ -106,8 +107,8 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
       });
     });
 
-    window.electron.ipcRenderer.on('update:auto-install-countdown', (data) => {
-      const { seconds, cancelled } = data as { seconds: number; cancelled?: boolean };
+    const unlistenCountdown = await listen('update:auto-install-countdown', (event) => {
+      const { seconds, cancelled } = event.payload as { seconds: number; cancelled?: boolean };
       set({ autoInstallCountdown: cancelled ? null : seconds });
     });
 

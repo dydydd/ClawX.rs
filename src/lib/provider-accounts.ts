@@ -21,17 +21,17 @@ export interface ProviderListItem {
 
 export async function fetchProviderSnapshot(): Promise<ProviderSnapshot> {
   const [accounts, statuses, vendors, defaultInfo] = await Promise.all([
-    hostApiFetch<ProviderAccount[]>('/api/provider-accounts'),
-    hostApiFetch<ProviderWithKeyInfo[]>('/api/providers'),
-    hostApiFetch<ProviderVendorInfo[]>('/api/provider-vendors'),
-    hostApiFetch<{ accountId: string | null }>('/api/provider-accounts/default'),
+    hostApiFetch<ProviderAccount[]>('/api/provider-accounts').catch(() => []),
+    hostApiFetch<ProviderWithKeyInfo[]>('/api/providers').catch(() => []),
+    hostApiFetch<ProviderVendorInfo[]>('/api/provider-vendors').catch(() => []),
+    hostApiFetch<{ accountId: string | null }>('/api/provider-accounts/default').catch(() => ({ accountId: null })),
   ]);
 
   return {
-    accounts,
-    statuses,
-    vendors,
-    defaultAccountId: defaultInfo.accountId,
+    accounts: Array.isArray(accounts) ? accounts : [],
+    statuses: Array.isArray(statuses) ? statuses : [],
+    vendors: Array.isArray(vendors) ? vendors : [],
+    defaultAccountId: defaultInfo?.accountId ?? null,
   };
 }
 
@@ -70,7 +70,8 @@ export function buildProviderAccountId(
     return existingAccountId;
   }
 
-  const vendor = vendors.find((candidate) => candidate.id === vendorId);
+  const safeVendors = vendors || [];
+  const vendor = safeVendors.find((candidate) => candidate.id === vendorId);
   return vendor?.supportsMultipleAccounts ? `${vendorId}-${crypto.randomUUID()}` : vendorId;
 }
 
@@ -97,11 +98,15 @@ export function buildProviderListItems(
   vendors: ProviderVendorInfo[],
   defaultAccountId: string | null,
 ): ProviderListItem[] {
-  const vendorMap = new Map(vendors.map((vendor) => [vendor.id, vendor]));
-  const statusMap = new Map(statuses.map((status) => [status.id, status]));
+  const safeAccounts = accounts || [];
+  const safeStatuses = statuses || [];
+  const safeVendors = vendors || [];
 
-  if (accounts.length > 0) {
-    return accounts
+  const vendorMap = new Map(safeVendors.map((vendor) => [vendor.id, vendor]));
+  const statusMap = new Map(safeStatuses.map((status) => [status.id, status]));
+
+  if (safeAccounts.length > 0) {
+    return safeAccounts
       .map((account) => ({
         account,
         vendor: vendorMap.get(account.vendorId),
@@ -114,7 +119,7 @@ export function buildProviderListItems(
       });
   }
 
-  return statuses.map((status) => ({
+  return safeStatuses.map((status) => ({
     account: legacyProviderToAccount(status),
     vendor: vendorMap.get(status.type),
     status,

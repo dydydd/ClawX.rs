@@ -1,9 +1,8 @@
 /**
  * Gateway State Store
- * Uses Host API + SSE for lifecycle/status and a direct renderer WebSocket for runtime RPC.
+ * Uses Tauri IPC for gateway communication.
  */
 import { create } from 'zustand';
-import { hostApiFetch } from '@/lib/host-api';
 import { invokeIpc } from '@/lib/api-client';
 import { subscribeHostEvent } from '@/lib/host-events';
 import type { GatewayStatus } from '../types/gateway';
@@ -154,7 +153,7 @@ function mapChannelStatus(status: string): 'connected' | 'connecting' | 'disconn
 export const useGatewayStore = create<GatewayState>((set, get) => ({
   status: {
     state: 'stopped',
-    port: 18789,
+    port: 9876,
   },
   health: null,
   isInitialized: false,
@@ -169,12 +168,14 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
 
     gatewayInitPromise = (async () => {
       try {
-        const status = await hostApiFetch<GatewayStatus>('/api/gateway/status');
+        // Use Tauri IPC to get gateway status
+        const status = await invokeIpc<GatewayStatus>('gateway:get_status');
         set({ status, isInitialized: true });
 
         if (!gatewayEventUnsubscribers) {
           const unsubscribers: Array<() => void> = [];
           unsubscribers.push(subscribeHostEvent<GatewayStatus>('gateway:status', (payload) => {
+            console.log('[gateway] Received status update:', payload);
             set({ status: payload });
           }));
           unsubscribers.push(subscribeHostEvent<{ message?: string }>('gateway:error', (payload) => {
@@ -220,15 +221,7 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   start: async () => {
     try {
       set({ status: { ...get().status, state: 'starting' }, lastError: null });
-      const result = await hostApiFetch<{ success: boolean; error?: string }>('/api/gateway/start', {
-        method: 'POST',
-      });
-      if (!result.success) {
-        set({
-          status: { ...get().status, state: 'error', error: result.error },
-          lastError: result.error || 'Failed to start Gateway',
-        });
-      }
+      await invokeIpc<void>('gateway:start');
     } catch (error) {
       set({
         status: { ...get().status, state: 'error', error: String(error) },
@@ -239,7 +232,7 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
 
   stop: async () => {
     try {
-      await hostApiFetch('/api/gateway/stop', { method: 'POST' });
+      await invokeIpc<void>('gateway:stop');
       set({ status: { ...get().status, state: 'stopped' }, lastError: null });
     } catch (error) {
       console.error('Failed to stop Gateway:', error);
@@ -250,15 +243,7 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   restart: async () => {
     try {
       set({ status: { ...get().status, state: 'starting' }, lastError: null });
-      const result = await hostApiFetch<{ success: boolean; error?: string }>('/api/gateway/restart', {
-        method: 'POST',
-      });
-      if (!result.success) {
-        set({
-          status: { ...get().status, state: 'error', error: result.error },
-          lastError: result.error || 'Failed to restart Gateway',
-        });
-      }
+      await invokeIpc<void>('gateway:start');
     } catch (error) {
       set({
         status: { ...get().status, state: 'error', error: String(error) },
@@ -269,9 +254,11 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
 
   checkHealth: async () => {
     try {
-      const result = await hostApiFetch<GatewayHealth>('/api/gateway/health');
-      set({ health: result });
-      return result;
+      // For now, just check if gateway is running
+      const status = await invokeIpc<GatewayStatus>('gateway:get_status');
+      const health: GatewayHealth = { ok: status.state === 'running' };
+      set({ health });
+      return health;
     } catch (error) {
       const health: GatewayHealth = { ok: false, error: String(error) };
       set({ health });
@@ -280,15 +267,7 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   },
 
   rpc: async <T>(method: string, params?: unknown, timeoutMs?: number): Promise<T> => {
-    const response = await invokeIpc<{
-      success: boolean;
-      result?: T;
-      error?: string;
-    }>('gateway:rpc', method, params, timeoutMs);
-    if (!response.success) {
-      throw new Error(response.error || `Gateway RPC failed: ${method}`);
-    }
-    return response.result as T;
+    return await invokeIpc<T>('gateway:rpc', method, params, timeoutMs);
   },
 
   setStatus: (status) => set({ status }),

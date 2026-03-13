@@ -5,9 +5,10 @@
  */
 import { useState, useEffect } from 'react';
 import { Minus, Square, X, Copy } from 'lucide-react';
-import { invokeIpc } from '@/lib/api-client';
+import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
-const isMac = window.electron?.platform === 'darwin';
+const isMac = typeof window !== 'undefined' && navigator.platform.toLowerCase().includes('mac');
 
 export function TitleBar() {
   if (isMac) {
@@ -23,25 +24,26 @@ function WindowsTitleBar() {
 
   useEffect(() => {
     // Check initial state
-    invokeIpc('window:isMaximized').then((val) => {
-      setMaximized(val as boolean);
-    });
+    getCurrentWindow().isMaximized().then(setMaximized);
   }, []);
 
-  const handleMinimize = () => {
-    invokeIpc('window:minimize');
+  const handleMinimize = async () => {
+    await getCurrentWindow().minimize();
   };
 
-  const handleMaximize = () => {
-    invokeIpc('window:maximize').then(() => {
-      invokeIpc('window:isMaximized').then((val) => {
-        setMaximized(val as boolean);
-      });
-    });
+  const handleMaximize = async () => {
+    const win = getCurrentWindow();
+    if (await win.isMaximized()) {
+      await win.unmaximize();
+      setMaximized(false);
+    } else {
+      await win.maximize();
+      setMaximized(true);
+    }
   };
 
-  const handleClose = () => {
-    invokeIpc('window:close');
+  const handleClose = async () => {
+    await getCurrentWindow().close();
   };
 
   return (

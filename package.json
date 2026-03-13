@@ -45,9 +45,13 @@
         "version:patch": "pnpm version patch",
         "version:minor": "pnpm version minor",
         "version:major": "pnpm version major",
-        "postversion": "git push && git push --tags"
+        "postversion": "git push && git push --tags",
+        "tauri:dev": "tauri dev",
+        "tauri:build": "tauri build",
+        "tauri:build:debug": "tauri build --debug"
     },
     "dependencies": {
+        "@tauri-apps/plugin-shell": "^2.3.5",
         "clawhub": "^0.5.0",
         "electron-store": "^11.0.2",
         "electron-updater": "^6.8.3",
@@ -73,6 +77,8 @@
         "@radix-ui/react-tooltip": "^1.2.8",
         "@sliverp/qqbot": "^1.5.4",
         "@soimy/dingtalk": "^3.1.4",
+        "@tauri-apps/api": "^2.10.1",
+        "@tauri-apps/cli": "^2.10.1",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.2",
         "@types/node": "^25.3.0",

@@ -3,6 +3,8 @@
  * Application configuration
  */
 import { useEffect, useMemo, useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
+import { open } from '@tauri-apps/plugin-shell';
 import {
   Sun,
   Moon,
@@ -96,7 +98,7 @@ export function Settings() {
   const [showTelemetryViewer, setShowTelemetryViewer] = useState(false);
   const [telemetryEntries, setTelemetryEntries] = useState<UiTelemetryEntry[]>([]);
 
-  const isWindows = window.electron.platform === 'win32';
+  const isWindows = navigator.platform.toLowerCase().includes('win');
   const showCliTools = true;
   const [showLogs, setShowLogs] = useState(false);
   const [logContent, setLogContent] = useState('');
@@ -191,14 +193,16 @@ export function Settings() {
   };
 
   useEffect(() => {
-    const unsubscribe = window.electron.ipcRenderer.on(
-      'openclaw:cli-installed',
-      (...args: unknown[]) => {
-        const installedPath = typeof args[0] === 'string' ? args[0] : '';
-        toast.success(`openclaw CLI installed at ${installedPath}`);
-      },
-    );
-    return () => { unsubscribe?.(); };
+    let unlisten: (() => void) | null = null;
+    listen('openclaw:cli-installed', (event) => {
+      const installedPath = typeof event.payload === 'string' ? event.payload : '';
+      toast.success(`openclaw CLI installed at ${installedPath}`);
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      if (unlisten) unlisten();
+    };
   }, []);
 
   useEffect(() => {
@@ -903,14 +907,14 @@ export function Settings() {
                 <Button
                   variant="link"
                   className="h-auto p-0 text-[14px] text-blue-500 hover:text-blue-600 font-medium"
-                  onClick={() => window.electron.openExternal('https://claw-x.com')}
+                  onClick={() => open('https://claw-x.com')}
                 >
                   {t('about.docs')}
                 </Button>
                 <Button
                   variant="link"
                   className="h-auto p-0 text-[14px] text-blue-500 hover:text-blue-600 font-medium"
-                  onClick={() => window.electron.openExternal('https://github.com/ValueCell-ai/ClawX')}
+                  onClick={() => open('https://github.com/ValueCell-ai/ClawX')}
                 >
                   {t('about.github')}
                 </Button>

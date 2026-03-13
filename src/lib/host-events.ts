@@ -1,9 +1,10 @@
 import { createHostEventSource } from './host-api';
+import { listen } from '@tauri-apps/api/event';
 
 let eventSource: EventSource | null = null;
 
 const HOST_EVENT_TO_IPC_CHANNEL: Record<string, string> = {
-  'gateway:status': 'gateway:status-changed',
+  'gateway:status': 'gateway:status',
   'gateway:error': 'gateway:error',
   'gateway:notification': 'gateway:notification',
   'gateway:chat-message': 'gateway:chat-message',
@@ -36,15 +37,17 @@ export function subscribeHostEvent<T = unknown>(
   eventName: string,
   handler: (payload: T) => void,
 ): () => void {
-  const ipc = window.electron?.ipcRenderer;
   const ipcChannel = HOST_EVENT_TO_IPC_CHANNEL[eventName];
-  if (ipcChannel && ipc?.on && ipc?.off) {
-    const listener = (payload: unknown) => {
-      handler(payload as T);
-    };
-    ipc.on(ipcChannel, listener);
+  if (ipcChannel) {
+    // Tauri event listener
+    let unlisten: (() => void) | null = null;
+    listen<T>(ipcChannel, (event) => {
+      handler(event.payload);
+    }).then((fn) => {
+      unlisten = fn;
+    });
     return () => {
-      ipc.off(ipcChannel, listener);
+      if (unlisten) unlisten();
     };
   }
 

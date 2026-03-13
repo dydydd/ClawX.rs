@@ -20,12 +20,20 @@ interface AgentsState {
 }
 
 function applySnapshot(snapshot: AgentsSnapshot | undefined) {
-  return snapshot ? {
-    agents: snapshot.agents,
-    defaultAgentId: snapshot.defaultAgentId,
-    configuredChannelTypes: snapshot.configuredChannelTypes,
-    channelOwners: snapshot.channelOwners,
-  } : {};
+  if (!snapshot) {
+    return {
+      agents: [],
+      defaultAgentId: 'main',
+      configuredChannelTypes: [],
+      channelOwners: {},
+    };
+  }
+  return {
+    agents: snapshot.agents || [],
+    defaultAgentId: snapshot.defaultAgentId || 'main',
+    configuredChannelTypes: snapshot.configuredChannelTypes || [],
+    channelOwners: snapshot.channelOwners || {},
+  };
 }
 
 export const useAgentsStore = create<AgentsState>((set) => ({

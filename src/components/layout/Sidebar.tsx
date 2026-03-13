@@ -5,6 +5,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { open } from '@tauri-apps/plugin-shell';
 import {
   Network,
   Bot,
@@ -157,7 +158,7 @@ export function Sidebar() {
         error?: string;
       }>('/api/gateway/control-ui');
       if (result.success && result.url) {
-        window.electron.openExternal(result.url);
+        await open(result.url);
       } else {
         console.error('Failed to get Dev Console URL:', result.error);
       }
@@ -182,7 +183,7 @@ export function Sidebar() {
   }, [fetchAgents]);
 
   const agentNameById = useMemo(
-    () => Object.fromEntries(agents.map((agent) => [agent.id, agent.name])),
+    () => Object.fromEntries((agents || []).map((agent) => [agent.id, agent.name])),
     [agents],
   );
   const sessionBuckets: Array<{ key: SessionBucketKey; label: string; sessions: typeof sessions }> = [

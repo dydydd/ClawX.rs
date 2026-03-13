@@ -7,6 +7,7 @@ import { Component, useEffect } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import i18n from './i18n';
+import { listen } from '@tauri-apps/api/event';
 import { MainLayout } from './components/layout/MainLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Models } from './pages/Models';
@@ -94,6 +95,9 @@ function App() {
   const language = useSettingsStore((state) => state.language);
   const setupComplete = useSettingsStore((state) => state.setupComplete);
   const initGateway = useGatewayStore((state) => state.init);
+  const gatewayStatus = useGatewayStore((state) => state.status);
+  const startGateway = useGatewayStore((state) => state.start);
+  const isGatewayInitialized = useGatewayStore((state) => state.isInitialized);
 
   useEffect(() => {
     initSettings();
@@ -111,6 +115,20 @@ function App() {
     initGateway();
   }, [initGateway]);
 
+  // Auto-start gateway on app launch if not running
+  useEffect(() => {
+    if (!isGatewayInitialized) return;
+
+    // Only start if gateway is stopped or has an error, and not already starting
+    if (gatewayStatus.state === 'stopped' || gatewayStatus.state === 'error') {
+      console.log('[App] Auto-starting gateway...');
+      startGateway().catch((error) => {
+        console.error('[App] Failed to auto-start gateway:', error);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGatewayInitialized]);
+
   // Redirect to setup wizard if not complete
   useEffect(() => {
     if (!setupComplete && !location.pathname.startsWith('/setup')) {
@@ -127,12 +145,19 @@ function App() {
       }
     };
 
-    const unsubscribe = window.electron.ipcRenderer.on('navigate', handleNavigate);
+    // Setup event listener
+    let unlisten: (() => void) | null = null;
+    listen('navigate', (event) => {
+      const path = event.payload;
+      if (typeof path === 'string') {
+        navigate(path);
+      }
+    }).then((fn) => {
+      unlisten = fn;
+    });
 
     return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
+      if (unlisten) unlisten();
     };
   }, [navigate]);
 

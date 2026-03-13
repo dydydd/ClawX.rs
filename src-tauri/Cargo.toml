@@ -1,0 +1,81 @@
+[package]
+name = "clawx"
+version = "0.2.1"
+description = "ClawX - Graphical AI Assistant based on OpenClaw"
+authors = ["ClawX Team"]
+license = "MIT"
+repository = "https://github.com/ValueCell-ai/ClawX"
+edition = "2021"
+rust-version = "1.70"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri core
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-autostart = "2"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# WebSocket
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+
+# Cryptography
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
+base64 = "0.22"
+sha2 = "0.10"
+hex = "0.4"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Keychain/Secret storage
+keyring = "2"
+
+# File system and paths
+dirs = "5"
+uuid = { version = "1", features = ["v4", "serde"] }
+walkdir = "2"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# HTTP client for updates
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+semver = "1"
+
+# Regex for ClawHub output parsing
+regex = "1"
+
+# Open files with default application
+open = "5"
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[target."cfg(target_os = \"macos\")".dependencies]
+cocoa = "0.26"
+objc = "0.2"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "z"
+strip = true

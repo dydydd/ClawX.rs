@@ -10,7 +10,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useChannelsStore } from '@/stores/channels';
 import { useGatewayStore } from '@/stores/gateway';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { hostApiFetch } from '@/lib/host-api';
 import { subscribeHostEvent } from '@/lib/host-events';
 import { ChannelConfigModal } from '@/components/channels/ChannelConfigModal';
 import { cn } from '@/lib/utils';
@@ -48,15 +47,31 @@ export function Channels() {
 
   const fetchConfiguredTypes = useCallback(async () => {
     try {
-      const result = await hostApiFetch<{
-        success: boolean;
-        channels?: string[];
-      }>('/api/channels/configured');
-      if (result.success && result.channels) {
-        setConfiguredTypes(result.channels);
+      // Use Tauri IPC to get configured channels
+      const { invokeIpc } = await import('@/lib/api-client');
+      const channels = await invokeIpc<string[]>('list_channels');
+      if (channels) {
+        setConfiguredTypes(channels);
       }
     } catch {
-      // Ignore refresh errors here and keep the last known state.
+      // Fallback to RPC if IPC fails
+      try {
+        const data = await useGatewayStore.getState().rpc<{
+          channelOrder?: string[];
+          channels?: Record<string, unknown>;
+        }>('channels.status', { probe: true });
+
+        if (data?.channels) {
+          const configuredTypes = Object.keys(data.channels).filter((channelId) => {
+            const channel = data.channels?.[channelId] as Record<string, unknown> | undefined;
+            return channel?.configured === true || channel?.running === true;
+          });
+          setConfiguredTypes(configuredTypes);
+        }
+      } catch {
+        // Ignore errors and keep the last known state
+        console.debug('[Channels] Could not fetch configured types');
+      }
     }
   }, []);
 

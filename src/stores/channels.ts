@@ -3,7 +3,6 @@
  * Manages messaging channel state
  */
 import { create } from 'zustand';
-import { hostApiFetch } from '@/lib/host-api';
 import { useGatewayStore } from './gateway';
 import type { Channel, ChannelType } from '../types/channel';
 
@@ -171,19 +170,11 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
     const channelType = channelId.split('-')[0];
 
     try {
-      // Delete the channel configuration from openclaw.json
-      await hostApiFetch(`/api/channels/config/${encodeURIComponent(channelType)}`, {
-        method: 'DELETE',
-      });
+      // Delete the channel configuration via Tauri IPC
+      const { invokeIpc } = await import('@/lib/api-client');
+      await invokeIpc('delete_channel', { channelType });
     } catch (error) {
-      console.error('Failed to delete channel config:', error);
-    }
-
-    try {
-      await useGatewayStore.getState().rpc('channels.delete', { channelId: channelType });
-    } catch (error) {
-      // Continue with local deletion even if gateway fails
-      console.error('Failed to delete channel from gateway:', error);
+      console.error('Failed to delete channel:', error);
     }
 
     // Remove from local state

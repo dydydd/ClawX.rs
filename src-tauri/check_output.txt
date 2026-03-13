@@ -1,0 +1,660 @@
+warning: unused import: `serde::Serialize`
+ --> src\commands\gateway.rs:4:5
+  |
+4 | use serde::Serialize;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `serde::Serialize`
+ --> src\commands\providers.rs:4:5
+  |
+4 | use serde::Serialize;
+  |     ^^^^^^^^^^^^^^^^
+
+warning: unexpected `cfg` condition value: `qrcode`
+   --> src\core\channels\whatsapp.rs:466:7
+    |
+466 | #[cfg(feature = "qrcode")]
+    |       ^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `qrcode` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unused import: `WhatsAppLoginState`
+  --> src\core\channels\mod.rs:10:37
+   |
+10 | pub use whatsapp::{WhatsAppManager, WhatsAppLoginState, WhatsAppLoginEvent, QRCodeData};
+   |                                     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `process::*`
+ --> src\core\gateway\mod.rs:8:9
+  |
+8 | pub use process::*;
+  |         ^^^^^^^^^^
+
+warning: unused import: `websocket::*`
+ --> src\core\gateway\mod.rs:9:9
+  |
+9 | pub use websocket::*;
+  |         ^^^^^^^^^^^^
+
+warning: unused import: `providers::ProviderStore`
+  --> src\core\storage\mod.rs:11:9
+   |
+11 | pub use providers::ProviderStore;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `tauri_plugin_shell::Shell::<R>::open`: Use tauri-plugin-opener instead.
+ --> src\commands\shell.rs:9:10
+  |
+9 |         .open(&url, None)
+  |          ^^^^
+  |
+  = note: `#[warn(deprecated)]` on by default
+
+warning: unused import: `Manager`
+  --> src\core\gateway\manager.rs:10:13
+   |
+10 | use tauri::{Manager, Emitter};
+   |             ^^^^^^^
+
+warning: unused variable: `write`
+   --> src\core\gateway\websocket.rs:493:14
+    |
+493 |         let (write, mut read) = ws_stream.split();
+    |              ^^^^^ help: if this is intentional, prefix it with an underscore: `_write`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `data`
+   --> src\core\gateway\websocket.rs:264:40
+    |
+264 |                     Ok(WsMessage::Ping(data)) => {
+    |                                        ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `payload`
+   --> src\core\gateway\websocket.rs:219:67
+    |
+219 | ...                   GatewayMessage::Res { id, ok, payload, error } => {
+    |                                                     ^^^^^^^ help: try ignoring the field: `payload: _`
+
+warning: unused variable: `data`
+   --> src\core\gateway\websocket.rs:183:44
+    |
+183 |                         Ok(WsMessage::Ping(data)) => {
+    |                                            ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `shutdown_rx`
+   --> src\core\gateway\websocket.rs:142:27
+    |
+142 |         let (shutdown_tx, shutdown_rx) = oneshot::channel();
+    |                           ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_shutdown_rx`
+
+warning: unused variable: `pending`
+   --> src\core\gateway\websocket.rs:151:13
+    |
+151 |         let pending = self.pending_requests.clone();
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_pending`
+
+warning: unused variable: `write_task`
+   --> src\core\gateway\websocket.rs:152:13
+    |
+152 |         let write_task = tokio::spawn(async move {
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_write_task`
+
+warning: unused variable: `api_key`
+   --> src\services\providers\service.rs:231:9
+    |
+231 |         api_key: Option<String>,
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_api_key`
+
+warning: unused variable: `channel`
+   --> src\core\channels\whatsapp.rs:164:13
+    |
+164 |         let channel = self
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_channel`
+
+warning: unused variable: `account_id_clone`
+   --> src\core\channels\whatsapp.rs:240:13
+    |
+240 |         let account_id_clone = account_id.to_string();
+    |             ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_account_id_clone`
+
+warning: unused variable: `handle`
+   --> src\core\channels\whatsapp.rs:365:21
+    |
+365 |         if let Some(handle) = active_logins.remove(account_id) {
+    |                     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_handle`
+
+warning: unused variable: `job`
+  --> src\commands\cron.rs:22:30
+   |
+22 | pub async fn create_cron_job(job: CronJob) -> Result<(), String> {
+   |                              ^^^ help: if this is intentional, prefix it with an underscore: `_job`
+
+warning: unused variable: `id`
+  --> src\commands\cron.rs:29:30
+   |
+29 | pub async fn delete_cron_job(id: String) -> Result<(), String> {
+   |                              ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `verifying_key`
+   --> src\core\auth\device_identity.rs:148:13
+    |
+148 |         let verifying_key = signing_key.verifying_key();
+    |             ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_verifying_key`
+
+warning: struct `FetchOptions` is never constructed
+  --> src\commands\hostapi.rs:15:12
+   |
+15 | pub struct FetchOptions {
+   |            ^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `FetchResponse` is never constructed
+  --> src\commands\hostapi.rs:25:12
+   |
+25 | pub struct FetchResponse {
+   |            ^^^^^^^^^^^^^
+
+warning: fields `public_key_pem` and `private_key_pem` are never read
+  --> src\core\auth\device_identity.rs:17:9
+   |
+15 | pub struct DeviceIdentity {
+   |            -------------- fields in this struct
+16 |     pub device_id: String,
+17 |     pub public_key_pem: String,
+   |         ^^^^^^^^^^^^^^
+18 |     pub private_key_pem: String,
+   |         ^^^^^^^^^^^^^^^
+   |
+   = note: `DeviceIdentity` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: method `public_key_bytes` is never used
+   --> src\core\auth\device_identity.rs:226:12
+    |
+132 | impl DeviceIdentity {
+    | ------------------- method in this implementation
+...
+226 |     pub fn public_key_bytes(&self) -> [u8; 32] {
+    |            ^^^^^^^^^^^^^^^^
+
+warning: method `set_status` is never used
+  --> src\core\channels\config.rs:93:12
+   |
+76 | impl Channel {
+   | ------------ method in this implementation
+...
+93 |     pub fn set_status(&mut self, status: ChannelStatus, message: Option<String>) {
+   |            ^^^^^^^^^^
+
+warning: methods `list_channels_by_type`, `get_channel_by_account`, `channel_exists`, and `list_enabled_channels` are never used
+   --> src\core\channels\config.rs:206:18
+    |
+144 | impl ChannelManager {
+    | ------------------- methods in this implementation
+...
+206 |     pub async fn list_channels_by_type(&self, channel_type: &str) -> Vec<Channel> {
+    |                  ^^^^^^^^^^^^^^^^^^^^^
+...
+222 |     pub async fn get_channel_by_account(&self, channel_type: &str, account_id: &str) -> Option<Channel> {
+    |                  ^^^^^^^^^^^^^^^^^^^^^^
+...
+283 |     pub async fn channel_exists(&self, id: &str) -> bool {
+    |                  ^^^^^^^^^^^^^^
+...
+289 |     pub async fn list_enabled_channels(&self) -> Vec<Channel> {
+    |                  ^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `WhatsAppSession` is never constructed
+  --> src\core\channels\whatsapp.rs:53:12
+   |
+53 | pub struct WhatsAppSession {
+   |            ^^^^^^^^^^^^^^^
+
+warning: fields `account_id` and `event_tx` are never read
+  --> src\core\channels\whatsapp.rs:81:5
+   |
+79 | struct WhatsAppLoginHandle {
+   |        ------------------- fields in this struct
+80 |     /// Account ID being logged in
+81 |     account_id: String,
+   |     ^^^^^^^^^^
+...
+89 |     event_tx: mpsc::Sender<WhatsAppLoginEvent>,
+   |     ^^^^^^^^
+
+warning: variants `Connected`, `Error`, and `Stopped` are never constructed
+   --> src\core\channels\whatsapp.rs:101:5
+    |
+ 97 | pub enum WhatsAppLoginEvent {
+    |          ------------------ variants in this enum
+...
+101 |     Connected { account_id: String },
+    |     ^^^^^^^^^
+102 |     /// Connection closed/error
+103 |     Error { message: String },
+    |     ^^^^^
+104 |     /// Login process stopped
+105 |     Stopped,
+    |     ^^^^^^^
+    |
+    = note: `WhatsAppLoginEvent` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: method `is_login_in_progress` is never used
+   --> src\core\channels\whatsapp.rs:433:18
+    |
+108 | impl WhatsAppManager {
+    | -------------------- method in this implementation
+...
+433 |     pub async fn is_login_in_progress(&self, account_id: &str) -> bool {
+    |                  ^^^^^^^^^^^^^^^^^^^^
+
+warning: fields `max_attempts`, `base_delay_ms`, and `max_delay_ms` are never read
+  --> src\core\gateway\manager.rs:40:9
+   |
+38 | pub struct ReconnectConfig {
+   |            --------------- fields in this struct
+39 |     /// Maximum reconnection attempts
+40 |     pub max_attempts: u32,
+   |         ^^^^^^^^^^^^
+41 |     /// Base delay between attempts (ms)
+42 |     pub base_delay_ms: u64,
+   |         ^^^^^^^^^^^^^
+43 |     /// Maximum delay between attempts (ms)
+44 |     pub max_delay_ms: u64,
+   |         ^^^^^^^^^^^^
+   |
+   = note: `ReconnectConfig` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `reconnect_config` is never read
+  --> src\core\gateway\manager.rs:66:5
+   |
+58 | pub struct GatewayManager {
+   |            -------------- field in this struct
+...
+66 |     reconnect_config: ReconnectConfig,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: methods `is_connected`, `restart`, and `check_health` are never used
+   --> src\core\gateway\manager.rs:121:18
+    |
+ 77 | impl GatewayManager {
+    | ------------------- methods in this implementation
+...
+121 |     pub async fn is_connected(&self) -> bool {
+    |                  ^^^^^^^^^^^^
+...
+299 |     pub async fn restart(&self, token: String) -> Result<()> {
+    |                  ^^^^^^^
+...
+314 |     pub async fn check_health(&self) -> Result<bool> {
+    |                  ^^^^^^^^^^^^
+
+warning: methods `state` and `exit_code` are never used
+   --> src\core\gateway\process.rs:71:12
+    |
+ 59 | impl GatewayProcess {
+    | ------------------- methods in this implementation
+...
+ 71 |     pub fn state(&self) -> &GatewayProcessState {
+    |            ^^^^^
+...
+273 |     pub fn exit_code(&mut self) -> Option<i32> {
+    |            ^^^^^^^^^
+
+warning: variant `Drop` is never constructed
+   --> src\core\gateway\process.rs:297:5
+    |
+294 | enum StderrLevel {
+    |      ----------- variant in this enum
+...
+297 |     Drop,
+    |     ^^^^
+
+warning: function `get_openclaw_entry_path` is never used
+   --> src\core\gateway\process.rs:370:8
+    |
+370 | pub fn get_openclaw_entry_path() -> Result<PathBuf> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `is_openclaw_present` is never used
+   --> src\core\gateway\process.rs:375:8
+    |
+375 | pub fn is_openclaw_present() -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: field `timeout` is never read
+  --> src\core\gateway\websocket.rs:70:5
+   |
+68 | struct PendingRequest {
+   |        -------------- field in this struct
+69 |     tx: oneshot::Sender<Result<Value>>,
+70 |     timeout: Instant,
+   |     ^^^^^^^
+
+warning: method `is_connected` is never used
+   --> src\core\gateway\websocket.rs:437:12
+    |
+ 98 | impl GatewayWebSocket {
+    | --------------------- method in this implementation
+...
+437 |     pub fn is_connected(&self) -> bool {
+    |            ^^^^^^^^^^^^
+
+warning: struct `LogEntry` is never constructed
+  --> src\core\logging.rs:39:12
+   |
+39 | pub struct LogEntry {
+   |            ^^^^^^^^
+
+warning: fields `ring_buffer_size` and `level` are never read
+  --> src\core\logging.rs:63:5
+   |
+55 | pub struct Logger {
+   |            ------ fields in this struct
+...
+63 |     ring_buffer_size: usize,
+   |     ^^^^^^^^^^^^^^^^
+64 |     /// Current log level
+65 |     level: Arc<RwLock<LogLevel>>,
+   |     ^^^^^
+
+warning: multiple associated items are never used
+   --> src\core\logging.rs:114:18
+    |
+ 68 | impl Logger {
+    | ----------- associated items in this implementation
+...
+114 |     pub async fn set_level(&self, level: LogLevel) {
+    |                  ^^^^^^^^^
+...
+119 |     pub async fn get_level(&self) -> LogLevel {
+    |                  ^^^^^^^^^
+...
+124 |     fn format_message(level: &str, message: &str) -> String {
+    |        ^^^^^^^^^^^^^^
+...
+130 |     async fn write_log(&self, formatted: String) {
+    |              ^^^^^^^^^
+...
+152 |     pub async fn debug(&self, message: &str) {
+    |                  ^^^^^
+...
+161 |     pub async fn info(&self, message: &str) {
+    |                  ^^^^
+...
+170 |     pub async fn warn(&self, message: &str) {
+    |                  ^^^^
+...
+179 |     pub async fn error(&self, message: &str) {
+    |                  ^^^^^
+...
+274 |     pub async fn rotate_if_needed(&self) -> Result<()> {
+    |                  ^^^^^^^^^^^^^^^^
+
+warning: trait `PadToWidth` is never used
+   --> src\core\logging.rs:317:7
+    |
+317 | trait PadToWidth {
+    |       ^^^^^^^^^^
+
+warning: static `EXTRA_ENV_PROVIDERS` is never used
+   --> src\core\providers\registry.rs:478:12
+    |
+478 | pub static EXTRA_ENV_PROVIDERS: LazyLock<std::collections::HashMap<String, String>> = LazyLock::new(|| {
+    |            ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_provider_env_var` is never used
+   --> src\core\providers\registry.rs:494:8
+    |
+494 | pub fn get_provider_env_var(vendor_id: &str) -> Option<&'static str> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_provider_env_vars` is never used
+   --> src\core\providers\registry.rs:503:8
+    |
+503 | pub fn get_provider_env_vars(vendor_id: &str) -> Vec<&'static str> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_provider_default_model` is never used
+   --> src\core\providers\registry.rs:508:8
+    |
+508 | pub fn get_provider_default_model(vendor_id: &str) -> Option<&'static str> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_provider_backend_config` is never used
+   --> src\core\providers\registry.rs:514:8
+    |
+514 | pub fn get_provider_backend_config(vendor_id: &str) -> Option<&'static ProviderBackendConfig> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_keyable_provider_types` is never used
+   --> src\core\providers\registry.rs:520:8
+    |
+520 | pub fn get_keyable_provider_types() -> Vec<&'static str> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_provider_type_info_list` is never used
+   --> src\core\providers\registry.rs:530:8
+    |
+530 | pub fn get_provider_type_info_list() -> Vec<&'static ProviderTypeInfo> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `PreinstalledSkillSpec` is never constructed
+  --> src\core\skills\config.rs:36:12
+   |
+36 | pub struct PreinstalledSkillSpec {
+   |            ^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `PreinstalledManifest` is never constructed
+  --> src\core\skills\config.rs:45:12
+   |
+45 | pub struct PreinstalledManifest {
+   |            ^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `PreinstalledMarker` is never constructed
+  --> src\core\skills\config.rs:51:12
+   |
+51 | pub struct PreinstalledMarker {
+   |            ^^^^^^^^^^^^^^^^^^
+
+warning: struct `InstalledSkill` is never constructed
+  --> src\core\skills\config.rs:60:12
+   |
+60 | pub struct InstalledSkill {
+   |            ^^^^^^^^^^^^^^
+
+warning: methods `list_installed_skills`, `is_skill_installed`, `get_skill_version`, `set_skills_enabled`, and `get_skill_path` are never used
+   --> src\core\skills\config.rs:203:18
+    |
+ 73 | impl SkillConfigManager {
+    | ----------------------- methods in this implementation
+...
+203 |     pub async fn list_installed_skills(&self) -> Result<Vec<InstalledSkill>> {
+    |                  ^^^^^^^^^^^^^^^^^^^^^
+...
+258 |     pub async fn is_skill_installed(&self, id: &str) -> bool {
+    |                  ^^^^^^^^^^^^^^^^^^
+...
+265 |     async fn get_skill_version(&self, slug: &str) -> Option<String> {
+    |              ^^^^^^^^^^^^^^^^^
+...
+290 |     pub async fn set_skills_enabled(&self, skill_keys: Vec<String>, enabled: bool) -> Result<()> {
+    |                  ^^^^^^^^^^^^^^^^^^
+...
+316 |     pub fn get_skill_path(&self, slug: &str) -> PathBuf {
+    |            ^^^^^^^^^^^^^^
+
+warning: struct `Skill` is never constructed
+  --> src\core\skills\hub.rs:15:12
+   |
+15 | pub struct Skill {
+   |            ^^^^^
+
+warning: method `get_skill` is never used
+   --> src\core\skills\hub.rs:338:18
+    |
+ 66 | impl ClawHubClient {
+    | ------------------ method in this implementation
+...
+338 |     pub async fn get_skill(&self, id: &str) -> Option<Skill> {
+    |                  ^^^^^^^^^
+
+warning: field `secrets` is never read
+  --> src\core\state.rs:28:9
+   |
+22 | pub struct AppState {
+   |            -------- field in this struct
+...
+28 |     pub secrets: Arc<SecretStore>,
+   |         ^^^^^^^
+
+warning: function `get_providers_path` is never used
+  --> src\core\storage\mod.rs:20:8
+   |
+20 | pub fn get_providers_path() -> std::path::PathBuf {
+   |        ^^^^^^^^^^^^^^^^^^
+
+warning: enum `SecretType` is never used
+ --> src\core\storage\secrets.rs:9:10
+  |
+9 | pub enum SecretType {
+  |          ^^^^^^^^^^
+
+warning: field `app_name` is never read
+  --> src\core\storage\secrets.rs:17:5
+   |
+16 | pub struct SecretStore {
+   |            ----------- field in this struct
+17 |     app_name: String,
+   |     ^^^^^^^^
+
+warning: methods `set`, `get`, and `delete` are never used
+  --> src\core\storage\secrets.rs:29:12
+   |
+20 | impl SecretStore {
+   | ---------------- methods in this implementation
+...
+29 |     pub fn set(&self, account_id: &str, secret: &SecretType) -> Result<()> {
+   |            ^^^
+...
+40 |     pub fn get(&self, account_id: &str) -> Result<Option<SecretType>> {
+   |            ^^^
+...
+54 |     pub fn delete(&self, account_id: &str) -> Result<()> {
+   |            ^^^^^^
+
+warning: methods `get_or_default`, `save`, `has`, `remove`, and `path` are never used
+   --> src\core\storage\settings.rs:285:12
+    |
+162 | impl SettingsStore {
+    | ------------------ methods in this implementation
+...
+285 |     pub fn get_or_default(&self, key: &str) -> Value {
+    |            ^^^^^^^^^^^^^^
+...
+326 |     pub async fn save(&self) -> Result<()> {
+    |                  ^^^^
+...
+373 |     pub fn has(&self, key: &str) -> bool {
+    |            ^^^
+...
+381 |     pub fn remove(&mut self, key: &str) -> Option<Value> {
+    |            ^^^^^^
+...
+386 |     pub fn path(&self) -> &PathBuf {
+    |            ^^^^
+
+warning: struct `Provider` is never constructed
+  --> src\core\storage\providers.rs:12:12
+   |
+12 | pub struct Provider {
+   |            ^^^^^^^^
+
+warning: struct `ProviderStore` is never constructed
+  --> src\core\storage\providers.rs:21:12
+   |
+21 | pub struct ProviderStore {
+   |            ^^^^^^^^^^^^^
+
+warning: associated items `new`, `list`, `get`, `save`, `delete`, and `persist` are never used
+  --> src\core\storage\providers.rs:28:18
+   |
+26 | impl ProviderStore {
+   | ------------------ associated items in this implementation
+27 |     /// Create a new provider store
+28 |     pub async fn new(path: PathBuf) -> Result<Self> {
+   |                  ^^^
+...
+41 |     pub fn list(&self) -> Vec<&Provider> {
+   |            ^^^^
+...
+46 |     pub fn get(&self, id: &str) -> Option<&Provider> {
+   |            ^^^
+...
+51 |     pub fn save(&mut self, provider: Provider) {
+   |            ^^^^
+...
+56 |     pub fn delete(&mut self, id: &str) {
+   |            ^^^^^^
+...
+61 |     pub async fn persist(&self) -> Result<()> {
+   |                  ^^^^^^^
+
+warning: function `create_provider_api_key_service` is never used
+   --> src\services\providers\api_keys.rs:114:8
+    |
+114 | pub fn create_provider_api_key_service() -> ProviderApiKeyService {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: methods `get_vendor_definition`, `get_provider_env_var`, and `get_keyable_provider_types` are never used
+   --> src\services\providers\service.rs:391:12
+    |
+150 | impl ProviderService {
+    | -------------------- methods in this implementation
+...
+391 |     pub fn get_vendor_definition(&self, vendor_id: &str) -> Option<&'static ProviderDefinition> {
+    |            ^^^^^^^^^^^^^^^^^^^^^
+...
+396 |     pub fn get_provider_env_var(&self, vendor_id: &str) -> Option<&'static str> {
+    |            ^^^^^^^^^^^^^^^^^^^^
+...
+401 |     pub fn get_keyable_provider_types(&self) -> Vec<&'static str> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_tray` is never used
+ --> src\services\tray.rs:5:8
+  |
+5 | pub fn create_tray() -> Result<(), Box<dyn std::error::Error>> {
+  |        ^^^^^^^^^^^
+
+warning: function `create_menu` is never used
+ --> src\services\menu.rs:5:8
+  |
+5 | pub fn create_menu() -> Result<(), Box<dyn std::error::Error>> {
+  |        ^^^^^^^^^^^
+
+warning: struct `Updater` is never constructed
+ --> src\services\updater.rs:5:12
+  |
+5 | pub struct Updater {
+  |            ^^^^^^^
+
+warning: associated items `new` and `check_for_updates` are never used
+  --> src\services\updater.rs:10:12
+   |
+ 9 | impl Updater {
+   | ------------ associated items in this implementation
+10 |     pub fn new() -> Self {
+   |            ^^^
+...
+14 |     pub async fn check_for_updates(&self) -> Result<Option<String>, Box<dyn std::error::Error>> {
+   |                  ^^^^^^^^^^^^^^^^^
+
+warning: `clawx` (bin "clawx") generated 75 warnings (run `cargo fix --bin "clawx" -p clawx` to apply 20 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.44s

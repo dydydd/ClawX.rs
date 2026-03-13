@@ -9,6 +9,9 @@ dist-electron/
 release/
 *.local
 
+# Tauri build outputs
+src-tauri/target/
+
 # IDE
 .vscode/*
 !.vscode/extensions.json
@@ -44,13 +47,13 @@ coverage/
 .turbo/
 *.tsbuildinfo
 
-# Electron
+# Electron (ignore all Electron-related files)
+electron/
 *.dmg
 *.exe
 *.AppImage
 *.deb
 *.rpm
-
 resources/bin
 
 # Secrets
@@ -62,3 +65,8 @@ build/
 
 .cursor/
 .pnpm-store/
+
+# Temporary files
+*.md
+!README.md
+!.claude/

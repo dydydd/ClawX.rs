@@ -396,11 +396,54 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
       gateway: { status: 'checking', message: '' },
     });
 
-    // Check Node.js — always available in Electron
-    setChecks((prev) => ({
-      ...prev,
-      nodejs: { status: 'success', message: t('runtime.status.success') },
-    }));
+    // Check Node.js - use Tauri IPC to check real Node.js installation
+    try {
+      const nodeInfo = await invokeIpc<{
+        installed: boolean;
+        version?: string;
+        path?: string;
+        error?: string;
+      }>('nodejs:check_nodejs');
+
+      if (nodeInfo.installed && nodeInfo.version) {
+        const minVersion = '18.0.0'; // Minimum required Node.js version
+        const versionCheck = await invokeIpc<boolean>('nodejs:check_nodejs_version', { minVersion });
+
+        if (versionCheck) {
+          setChecks((prev) => ({
+            ...prev,
+            nodejs: {
+              status: 'success',
+              message: `Node.js ${nodeInfo.version} installed`
+            },
+          }));
+        } else {
+          setChecks((prev) => ({
+            ...prev,
+            nodejs: {
+              status: 'error',
+              message: `Node.js ${nodeInfo.version} found, but version ${minVersion} or higher is required`
+            },
+          }));
+        }
+      } else {
+        setChecks((prev) => ({
+          ...prev,
+          nodejs: {
+            status: 'error',
+            message: nodeInfo.error || 'Node.js is not installed. Please install Node.js 18 or higher.'
+          },
+        }));
+      }
+    } catch (error) {
+      setChecks((prev) => ({
+        ...prev,
+        nodejs: {
+          status: 'error',
+          message: `Failed to check Node.js: ${error}`
+        },
+      }));
+    }
 
     // Check OpenClaw package status
     try {
@@ -548,20 +591,20 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
 
   const handleShowLogs = async () => {
     try {
-      const logs = await hostApiFetch<{ content: string }>('/api/logs?tailLines=100');
-      setLogContent(logs.content);
+      const logs = await invokeIpc<string>('logs:get_recent_logs', { tailLines: 100 });
+      setLogContent(logs);
       setShowLogs(true);
-    } catch {
-      setLogContent('(Failed to load logs)');
+    } catch (error) {
+      setLogContent(`Failed to load logs: ${error}`);
       setShowLogs(true);
     }
   };
 
   const handleOpenLogDir = async () => {
     try {
-      const { dir: logDir } = await hostApiFetch<{ dir: string | null }>('/api/logs/dir');
+      const logDir = await invokeIpc<string>('logs:get_log_dir');
       if (logDir) {
-        await invokeIpc('shell:showItemInFolder', logDir);
+        await invokeIpc('shell:show_item_in_folder', { path: logDir });
       }
     } catch {
       // ignore

@@ -7,6 +7,9 @@ import {
 } from './error-model';
 export { AppError } from './error-model';
 
+// Tauri API
+import { invoke as tauriInvoke } from '@tauri-apps/api/core';
+
 export type TransportKind = 'ipc' | 'ws' | 'http';
 export type GatewayTransportPreference = 'ws-first';
 type TransportInvoker = <T>(channel: string, args: unknown[]) => Promise<T>;
@@ -313,11 +316,15 @@ function toUnifiedRequest(channel: string, args: unknown[]): UnifiedRequest {
 }
 
 async function invokeViaIpc<T>(channel: string, args: unknown[]): Promise<T> {
+  // Tauri-only implementation
+  const channelToCommand = (ch: string) => ch.replace(':', '_');
+
   if (channel !== 'app:request' && UNIFIED_CHANNELS.has(channel)) {
     const request = toUnifiedRequest(channel, args);
 
     try {
-      const response = await window.electron.ipcRenderer.invoke('app:request', request) as UnifiedResponse;
+      const response = await tauriInvoke<UnifiedResponse>('app_request', { request });
+
       if (!response?.ok) {
         const message = response?.error?.message || 'Unified IPC request failed';
         if (message.includes('APP_REQUEST_UNSUPPORTED:')) {
@@ -337,7 +344,34 @@ async function invokeViaIpc<T>(channel: string, args: unknown[]): Promise<T> {
   }
 
   try {
-    return await window.electron.ipcRenderer.invoke(channel, ...args) as T;
+    // Tauri path: convert channel to command and invoke
+    const command = channelToCommand(channel);
+
+    // Special handling for gateway:rpc which expects named parameters
+    if (channel === 'gateway:rpc') {
+      const [method, params, timeoutMs] = args;
+      return await tauriInvoke<T>(command, {
+        method,
+        params,
+        timeoutMs,
+      } as Record<string, unknown>);
+    }
+
+    // Special handling for hostapi:fetch which expects a request parameter
+    if (channel === 'hostapi:fetch') {
+      const requestObj = args[0] as { path: string; method?: string; headers?: Record<string, string>; body?: unknown };
+      return await tauriInvoke<T>(command, {
+        request: {
+          path: requestObj.path,
+          method: requestObj.method || 'GET',
+          headers: requestObj.headers || {},
+          body: requestObj.body || null,
+        },
+      } as Record<string, unknown>);
+    }
+
+    const params = args.length > 0 && typeof args[0] === 'object' ? args[0] : {};
+    return await tauriInvoke<T>(command, params as Record<string, unknown>);
   } catch (err) {
     throw normalizeAppError(err, { transport: 'ipc', channel, source: 'legacy-ipc' });
   }
@@ -708,7 +742,7 @@ export function createGatewayWsTransportInvoker(options: GatewayWsTransportOptio
           id: 'openclaw-control-ui',
           displayName: 'ClawX UI',
           version: '1.0.0',
-          platform: window.electron?.platform ?? 'unknown',
+          platform: navigator.platform,
           mode: 'webchat',
         },
         auth,

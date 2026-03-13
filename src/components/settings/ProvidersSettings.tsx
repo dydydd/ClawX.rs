@@ -121,10 +121,10 @@ export function ProvidersSettings() {
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
-  const vendorMap = new Map(vendors.map((vendor) => [vendor.id, vendor]));
-  const existingVendorIds = new Set(accounts.map((account) => account.vendorId));
+  const vendorMap = new Map((vendors || []).map((vendor) => [vendor.id, vendor]));
+  const existingVendorIds = new Set((accounts || []).map((account) => account.vendorId));
   const displayProviders = useMemo(
-    () => buildProviderListItems(accounts, statuses, vendors, defaultAccountId),
+    () => buildProviderListItems(accounts || [], statuses || [], vendors || [], defaultAccountId),
     [accounts, statuses, vendors, defaultAccountId],
   );
 

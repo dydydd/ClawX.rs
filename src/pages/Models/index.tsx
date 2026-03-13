@@ -8,7 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useGatewayStore } from '@/stores/gateway';
 import { useSettingsStore } from '@/stores/settings';
-import { hostApiFetch } from '@/lib/host-api';
+import { invokeIpc } from '@/lib/api-client';
 import { trackUiEvent } from '@/lib/telemetry';
 import { ProvidersSettings } from '@/components/settings/ProvidersSettings';
 import { FeedbackState } from '@/components/common/FeedbackState';
@@ -49,15 +49,21 @@ export function Models() {
 
   useEffect(() => {
     trackUiEvent('models.page_viewed');
+    console.log('[Models] Page viewed, gateway status:', gatewayStatus);
   }, []);
 
   useEffect(() => {
+    console.log('[Models] useEffect triggered, isGatewayRunning:', isGatewayRunning, 'gatewayStatus:', gatewayStatus);
+
     if (usageFetchTimerRef.current) {
       clearTimeout(usageFetchTimerRef.current);
       usageFetchTimerRef.current = null;
     }
 
-    if (!isGatewayRunning) return;
+    if (!isGatewayRunning) {
+      console.log('[Models] Gateway not running, skipping fetch');
+      return;
+    }
 
     const generation = usageFetchGenerationRef.current + 1;
     usageFetchGenerationRef.current = generation;
@@ -74,7 +80,9 @@ export function Models() {
         restartMarker,
       });
       try {
-        const entries = await hostApiFetch<UsageHistoryEntry[]>('/api/usage/recent-token-history');
+        console.log('[Models] Fetching token usage history, attempt:', attempt);
+        const entries = await invokeIpc<UsageHistoryEntry[]>('get_recent_token_usage', undefined);
+        console.log('[Models] Token usage history result:', entries);
         if (usageFetchGenerationRef.current !== generation) return;
 
         const normalized = Array.isArray(entries) ? entries : [];
@@ -106,6 +114,7 @@ export function Models() {
           });
         }
       } catch (error) {
+        console.error('[Models] Failed to fetch token usage history:', error);
         if (usageFetchGenerationRef.current !== generation) return;
         trackUiEvent('models.token_usage_fetch_failed_attempt', {
           generation,
