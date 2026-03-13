@@ -108,7 +108,6 @@ impl CronStore {
     }
 
     pub async fn create(&self, input: CronJobCreateInput) -> CronJob {
-        let mut jobs = self.jobs.write().await;
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now().to_rfc3339();
 
@@ -130,8 +129,13 @@ impl CronStore {
             next_run: None,
         };
 
-        jobs.insert(id, job.clone());
+        // Insert job into map
+        {
+            let mut jobs = self.jobs.write().await;
+            jobs.insert(id, job.clone());
+        }
 
+        // Persist after releasing the lock
         if let Err(e) = self.persist().await {
             tracing::error!("Failed to persist cron jobs: {}", e);
         }
@@ -140,41 +144,48 @@ impl CronStore {
     }
 
     pub async fn update(&self, id: &str, input: CronJobUpdateInput) -> Option<CronJob> {
-        let mut jobs = self.jobs.write().await;
+        let updated = {
+            let mut jobs = self.jobs.write().await;
 
-        if let Some(job) = jobs.get_mut(id) {
-            if let Some(name) = input.name {
-                job.name = name;
-            }
-            if let Some(message) = input.message {
-                job.message = message;
-            }
-            if let Some(schedule) = input.schedule {
-                job.schedule = serde_json::json!({
-                    "kind": "cron",
-                    "expr": schedule
-                });
-            }
-            if let Some(enabled) = input.enabled {
-                job.enabled = enabled;
-            }
-            job.updated_at = Utc::now().to_rfc3339();
+            if let Some(job) = jobs.get_mut(id) {
+                if let Some(name) = input.name {
+                    job.name = name;
+                }
+                if let Some(message) = input.message {
+                    job.message = message;
+                }
+                if let Some(schedule) = input.schedule {
+                    job.schedule = serde_json::json!({
+                        "kind": "cron",
+                        "expr": schedule
+                    });
+                }
+                if let Some(enabled) = input.enabled {
+                    job.enabled = enabled;
+                }
+                job.updated_at = Utc::now().to_rfc3339();
 
-            let updated = job.clone();
+                Some(job.clone())
+            } else {
+                None
+            }
+        };
 
+        // Persist after releasing the lock
+        if updated.is_some() {
             if let Err(e) = self.persist().await {
                 tracing::error!("Failed to persist cron jobs: {}", e);
             }
-
-            Some(updated)
-        } else {
-            None
         }
+
+        updated
     }
 
     pub async fn delete(&self, id: &str) -> bool {
-        let mut jobs = self.jobs.write().await;
-        let removed = jobs.remove(id).is_some();
+        let removed = {
+            let mut jobs = self.jobs.write().await;
+            jobs.remove(id).is_some()
+        };
 
         if removed {
             if let Err(e) = self.persist().await {
@@ -186,22 +197,27 @@ impl CronStore {
     }
 
     pub async fn toggle(&self, id: &str, enabled: bool) -> Option<CronJob> {
-        let mut jobs = self.jobs.write().await;
+        let updated = {
+            let mut jobs = self.jobs.write().await;
 
-        if let Some(job) = jobs.get_mut(id) {
-            job.enabled = enabled;
-            job.updated_at = Utc::now().to_rfc3339();
+            if let Some(job) = jobs.get_mut(id) {
+                job.enabled = enabled;
+                job.updated_at = Utc::now().to_rfc3339();
 
-            let updated = job.clone();
+                Some(job.clone())
+            } else {
+                None
+            }
+        };
 
+        // Persist after releasing the lock
+        if updated.is_some() {
             if let Err(e) = self.persist().await {
                 tracing::error!("Failed to persist cron jobs: {}", e);
             }
-
-            Some(updated)
-        } else {
-            None
         }
+
+        updated
     }
 
     pub async fn trigger(&self, _id: &str) -> Result<(), String> {
