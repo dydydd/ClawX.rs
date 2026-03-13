@@ -255,11 +255,11 @@ export function Sidebar() {
           }}
           className={cn(
             'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[14px] font-medium transition-colors mb-2',
-            'bg-black/5 dark:bg-accent shadow-none border border-transparent text-foreground',
+            'hover:bg-black/5 dark:hover:bg-white/5 text-foreground/80',
             sidebarCollapsed && 'justify-center px-0',
           )}
         >
-          <div className="flex shrink-0 items-center justify-center text-foreground/80">
+          <div className="flex shrink-0 items-center justify-center text-muted-foreground">
             <Plus className="h-[18px] w-[18px]" strokeWidth={2} />
           </div>
           {!sidebarCollapsed && <span className="flex-1 text-left overflow-hidden text-ellipsis whitespace-nowrap">{t('sidebar.newChat')}</span>}

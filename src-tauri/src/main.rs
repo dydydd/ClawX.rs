@@ -146,6 +146,16 @@ pub fn run() {
                 std::env::consts::ARCH
             );
 
+            // Configure window decorations based on platform
+            #[cfg(target_os = "macos")]
+            {
+                use tauri::Manager;
+                if let Some(window) = app.get_webview_window("main") {
+                    // On macOS, enable decorations for native traffic lights
+                    window.set_decorations(true).ok();
+                }
+            }
+
             // Initialize application state (blocking, since setup is not async)
             let state = tauri::async_runtime::block_on(async {
                 AppState::new().await.expect("Failed to initialize app state")
