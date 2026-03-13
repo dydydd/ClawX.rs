@@ -325,14 +325,47 @@ pub fn init_logger() -> Result<Arc<Logger>> {
         .open(&log_file)
         .context("Failed to open log file for tracing")?;
 
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
-        )
-        .with_writer(std::sync::Mutex::new(file))
-        .with_ansi(false)
-        .init();
+    // Determine log level from env or default
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| {
+            #[cfg(debug_assertions)]
+            {
+                tracing_subscriber::EnvFilter::new("debug")
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                tracing_subscriber::EnvFilter::new("info")
+            }
+        });
+
+    #[cfg(debug_assertions)]
+    {
+        // In debug mode: output to both terminal and file
+        use tracing_subscriber::prelude::*;
+
+        let file_layer = tracing_subscriber::fmt::layer()
+            .with_writer(std::sync::Mutex::new(file))
+            .with_ansi(false);
+
+        let stdout_layer = tracing_subscriber::fmt::layer()
+            .with_writer(std::io::stdout);
+
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(file_layer)
+            .with(stdout_layer)
+            .init();
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        // In release mode: output only to file
+        tracing_subscriber::fmt()
+            .with_env_filter(env_filter)
+            .with_writer(std::sync::Mutex::new(file))
+            .with_ansi(false)
+            .init();
+    }
 
     Ok(Arc::new(logger))
 }

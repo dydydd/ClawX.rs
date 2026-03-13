@@ -204,7 +204,7 @@ export function Settings() {
           success: boolean;
           command?: string;
           error?: string;
-        }>('openclaw:getCliCommand');
+        }>('openclaw:get_cli_command');
         if (cancelled) return;
         if (result.success && result.command) {
           setOpenclawCliCommand(result.command);
