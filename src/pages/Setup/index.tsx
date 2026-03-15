@@ -33,7 +33,6 @@ import type { TFunction } from 'i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { toast } from 'sonner';
 import { invokeIpc } from '@/lib/api-client';
-import { hostApiFetch } from '@/lib/host-api';
 import { subscribeHostEvent } from '@/lib/host-events';
 interface SetupStep {
   id: string;
@@ -403,11 +402,11 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
         version?: string;
         path?: string;
         error?: string;
-      }>('nodejs:check_nodejs');
+      }>('check_nodejs');
 
       if (nodeInfo.installed && nodeInfo.version) {
         const minVersion = '18.0.0'; // Minimum required Node.js version
-        const versionCheck = await invokeIpc<boolean>('nodejs:check_nodejs_version', { minVersion });
+        const versionCheck = await invokeIpc<boolean>('check_nodejs_version', { minVersion });
 
         if (versionCheck) {
           setChecks((prev) => ({
@@ -818,10 +817,7 @@ function ProviderContent({
 
       if (accountId) {
         try {
-          await hostApiFetch('/api/provider-accounts/default', {
-            method: 'PUT',
-            body: JSON.stringify({ accountId }),
-          });
+          await invokeIpc('set_default_provider_account', { id: accountId });
           setSelectedAccountId(accountId);
         } catch (error) {
           console.error('Failed to set default provider account:', error);
@@ -868,29 +864,11 @@ function ProviderContent({
       // ignore check failure
     }
 
-    setOauthFlowing(true);
+    // OAuth functionality temporarily disabled - needs separate implementation
+    toast.info('OAuth authentication is not yet implemented');
+    setOauthFlowing(false);
     setOauthData(null);
-    setManualCodeInput('');
-    setOauthError(null);
-
-    try {
-      const snapshot = await fetchProviderSnapshot();
-      const accountId = buildProviderAccountId(
-        selectedProvider as ProviderType,
-        selectedAccountId,
-        snapshot.vendors,
-      );
-      const label = selectedProviderData?.name || selectedProvider;
-      pendingOAuthRef.current = { accountId, label };
-      await hostApiFetch('/api/providers/oauth/start', {
-        method: 'POST',
-        body: JSON.stringify({ provider: selectedProvider, accountId, label }),
-      });
-    } catch (e) {
-      setOauthError(String(e));
-      setOauthFlowing(false);
-      pendingOAuthRef.current = null;
-    }
+    pendingOAuthRef.current = null;
   };
 
   const handleCancelOAuth = async () => {
@@ -899,21 +877,14 @@ function ProviderContent({
     setManualCodeInput('');
     setOauthError(null);
     pendingOAuthRef.current = null;
-    await hostApiFetch('/api/providers/oauth/cancel', { method: 'POST' });
+    // OAuth cancel temporarily disabled - needs separate implementation
   };
 
   const handleSubmitManualOAuthCode = async () => {
     const value = manualCodeInput.trim();
     if (!value) return;
-    try {
-      await hostApiFetch('/api/providers/oauth/submit', {
-        method: 'POST',
-        body: JSON.stringify({ code: value }),
-      });
-      setOauthError(null);
-    } catch (error) {
-      setOauthError(String(error));
-    }
+    // OAuth submit temporarily disabled - needs separate implementation
+    setOauthError('OAuth authentication is not yet implemented');
   };
 
   // On mount, try to restore previously configured provider
@@ -936,9 +907,9 @@ function ProviderContent({
           const typeInfo = providers.find((p) => p.id === preferred.vendorId);
           const requiresKey = typeInfo?.requiresApiKey ?? false;
           onConfiguredChange(!requiresKey || hasConfiguredCredentials(preferred, statusMap.get(preferred.id)));
-          const storedKey = (await hostApiFetch<{ apiKey: string | null }>(
-            `/api/providers/${encodeURIComponent(preferred.id)}/api-key`,
-          )).apiKey;
+          const storedKey = await invokeIpc<string | null>('get_provider_api_key', {
+            providerId: preferred.id,
+          });
           onApiKeyChange(storedKey || '');
         } else if (!cancelled) {
           onConfiguredChange(false);
@@ -971,12 +942,10 @@ function ProviderContent({
         const accountIdForLoad = preferredAccount?.id || selectedProvider;
         setSelectedAccountId(preferredAccount?.id || null);
 
-        const savedProvider = await hostApiFetch<{ baseUrl?: string; model?: string; apiProtocol?: ProviderAccount['apiProtocol'] } | null>(
-          `/api/providers/${encodeURIComponent(accountIdForLoad)}`,
-        );
-        const storedKey = (await hostApiFetch<{ apiKey: string | null }>(
-          `/api/providers/${encodeURIComponent(accountIdForLoad)}/api-key`,
-        )).apiKey;
+        const savedProvider = await invokeIpc<{ baseUrl?: string; model?: string; apiProtocol?: ProviderAccount['apiProtocol'] } | null>('get_provider_account', { id: accountIdForLoad });
+        const storedKey = await invokeIpc<string | null>('get_provider_api_key', {
+          providerId: accountIdForLoad,
+        });
         if (!cancelled) {
           onApiKeyChange(storedKey || '');
 
@@ -1053,17 +1022,17 @@ function ProviderContent({
       // Validate key if the provider requires one and a key was entered
       const isApiKeyRequired = requiresKey || (supportsApiKey && authMode === 'apikey');
       if (isApiKeyRequired && apiKey) {
-        const result = await invokeIpc(
-          'provider:validateKey',
-          selectedAccountId || selectedProvider,
-          apiKey,
+        const result = await invokeIpc<{ valid: boolean; error?: string }>(
+          'validate_provider_api_key',
           {
+            providerId: selectedAccountId || selectedProvider,
+            apiKey,
             baseUrl: baseUrl.trim() || undefined,
             apiProtocol: (selectedProvider === 'custom' || selectedProvider === 'ollama')
               ? apiProtocol
               : undefined,
           }
-        ) as { valid: boolean; error?: string };
+        );
 
         setKeyValid(result.valid);
 
@@ -1109,43 +1078,45 @@ function ProviderContent({
         updatedAt: new Date().toISOString(),
       };
 
-      const saveResult = selectedAccountId
-        ? await hostApiFetch<{ success: boolean; error?: string }>(
-          `/api/provider-accounts/${encodeURIComponent(accountIdForSave)}`,
-          {
-            method: 'PUT',
-            body: JSON.stringify({
-              updates: {
-                label: accountPayload.label,
-                authMode: accountPayload.authMode,
-                baseUrl: accountPayload.baseUrl,
-                apiProtocol: accountPayload.apiProtocol,
-                model: accountPayload.model,
-                enabled: accountPayload.enabled,
-              },
-              apiKey: effectiveApiKey,
-            }),
-          },
-        )
-        : await hostApiFetch<{ success: boolean; error?: string }>('/api/provider-accounts', {
-          method: 'POST',
-          body: JSON.stringify({ account: accountPayload, apiKey: effectiveApiKey }),
-        });
-
-      if (!saveResult.success) {
-        throw new Error(saveResult.error || 'Failed to save provider config');
+      try {
+        if (selectedAccountId) {
+          await invokeIpc('update_provider_account', {
+            id: accountIdForSave,
+            updates: {
+              label: accountPayload.label,
+              authMode: accountPayload.authMode,
+              baseUrl: accountPayload.baseUrl,
+              apiProtocol: accountPayload.apiProtocol,
+              model: accountPayload.model,
+              enabled: accountPayload.enabled,
+            },
+          });
+        } else {
+          await invokeIpc('create_provider_account', {
+            account: accountPayload,
+            apiKey: effectiveApiKey,
+          });
+        }
+      } catch (saveError) {
+        throw new Error(String(saveError));
       }
 
-      const defaultResult = await hostApiFetch<{ success: boolean; error?: string }>(
-        '/api/provider-accounts/default',
-        {
-          method: 'PUT',
-          body: JSON.stringify({ accountId: accountIdForSave }),
-        },
-      );
+      // Set API key separately for update case
+      if (selectedAccountId && effectiveApiKey) {
+        try {
+          await invokeIpc('set_provider_api_key', {
+            providerId: accountIdForSave,
+            apiKey: effectiveApiKey,
+          });
+        } catch (keyError) {
+          console.error('Failed to set API key:', keyError);
+        }
+      }
 
-      if (!defaultResult.success) {
-        throw new Error(defaultResult.error || 'Failed to set default provider');
+      try {
+        await invokeIpc('set_default_provider_account', { id: accountIdForSave });
+      } catch (defaultError) {
+        console.error('Failed to set default provider:', defaultError);
       }
 
       setSelectedAccountId(accountIdForSave);

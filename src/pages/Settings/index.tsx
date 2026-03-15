@@ -31,6 +31,7 @@ import {
   setGatewayWsDiagnosticEnabled,
   toUserMessage,
 } from '@/lib/api-client';
+import { cn } from '@/lib/utils';
 import {
   clearUiTelemetry,
   getUiTelemetrySnapshot,
@@ -40,8 +41,6 @@ import {
 } from '@/lib/telemetry';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
-import { hostApiFetch } from '@/lib/host-api';
-import { cn } from '@/lib/utils';
 type ControlUiInfo = {
   url: string;
   token: string;
@@ -129,12 +128,12 @@ export function Settings() {
 
   const refreshControlUiInfo = async () => {
     try {
-      const result = await hostApiFetch<{
+      const result = await invokeIpc<{
         success: boolean;
-        url?: string;
-        token?: string;
-        port?: number;
-      }>('/api/gateway/control-ui');
+        url: string;
+        token: string;
+        port: number;
+      }>('gateway_get_control_ui');
       if (result.success && result.url && result.token && typeof result.port === 'number') {
         setControlUiInfo({ url: result.url, token: result.token, port: result.port });
       }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { hostApiFetch } from '@/lib/host-api';
+import { invoke } from '@tauri-apps/api/core';
 import type { ChannelType } from '@/types/channel';
 import type { AgentSummary, AgentsSnapshot } from '@/types/agent';
 
@@ -47,7 +47,7 @@ export const useAgentsStore = create<AgentsState>((set) => ({
   fetchAgents: async () => {
     set({ loading: true, error: null });
     try {
-      const snapshot = await hostApiFetch<AgentsSnapshot & { success?: boolean }>('/api/agents');
+      const snapshot = await invoke<AgentsSnapshot>('list_agents');
       set({
         ...applySnapshot(snapshot),
         loading: false,
@@ -60,10 +60,7 @@ export const useAgentsStore = create<AgentsState>((set) => ({
   createAgent: async (name: string) => {
     set({ error: null });
     try {
-      const snapshot = await hostApiFetch<AgentsSnapshot & { success?: boolean }>('/api/agents', {
-        method: 'POST',
-        body: JSON.stringify({ name }),
-      });
+      const snapshot = await invoke<AgentsSnapshot>('create_agent', { input: { name } });
       set(applySnapshot(snapshot));
     } catch (error) {
       set({ error: String(error) });
@@ -74,13 +71,7 @@ export const useAgentsStore = create<AgentsState>((set) => ({
   updateAgent: async (agentId: string, name: string) => {
     set({ error: null });
     try {
-      const snapshot = await hostApiFetch<AgentsSnapshot & { success?: boolean }>(
-        `/api/agents/${encodeURIComponent(agentId)}`,
-        {
-          method: 'PUT',
-          body: JSON.stringify({ name }),
-        }
-      );
+      const snapshot = await invoke<AgentsSnapshot>('update_agent', { agentId, input: { name } });
       set(applySnapshot(snapshot));
     } catch (error) {
       set({ error: String(error) });
@@ -91,10 +82,7 @@ export const useAgentsStore = create<AgentsState>((set) => ({
   deleteAgent: async (agentId: string) => {
     set({ error: null });
     try {
-      const snapshot = await hostApiFetch<AgentsSnapshot & { success?: boolean }>(
-        `/api/agents/${encodeURIComponent(agentId)}`,
-        { method: 'DELETE' }
-      );
+      const snapshot = await invoke<AgentsSnapshot>('delete_agent', { agentId });
       set(applySnapshot(snapshot));
     } catch (error) {
       set({ error: String(error) });
@@ -105,10 +93,7 @@ export const useAgentsStore = create<AgentsState>((set) => ({
   assignChannel: async (agentId: string, channelType: ChannelType) => {
     set({ error: null });
     try {
-      const snapshot = await hostApiFetch<AgentsSnapshot & { success?: boolean }>(
-        `/api/agents/${encodeURIComponent(agentId)}/channels/${encodeURIComponent(channelType)}`,
-        { method: 'PUT' }
-      );
+      const snapshot = await invoke<AgentsSnapshot>('agent_assign_channel', { agentId, channelType });
       set(applySnapshot(snapshot));
     } catch (error) {
       set({ error: String(error) });
@@ -119,10 +104,7 @@ export const useAgentsStore = create<AgentsState>((set) => ({
   removeChannel: async (agentId: string, channelType: ChannelType) => {
     set({ error: null });
     try {
-      const snapshot = await hostApiFetch<AgentsSnapshot & { success?: boolean }>(
-        `/api/agents/${encodeURIComponent(agentId)}/channels/${encodeURIComponent(channelType)}`,
-        { method: 'DELETE' }
-      );
+      const snapshot = await invoke<AgentsSnapshot>('agent_remove_channel', { agentId, channelType });
       set(applySnapshot(snapshot));
     } catch (error) {
       set({ error: String(error) });

@@ -5,7 +5,6 @@
  */
 import { useState, useEffect } from 'react';
 import { Minus, Square, X, Copy } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const isMac = typeof window !== 'undefined' && navigator.platform.toLowerCase().includes('mac');

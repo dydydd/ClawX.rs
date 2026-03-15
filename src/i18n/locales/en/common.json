@@ -35,7 +35,13 @@
         "restart": "Restart",
         "show": "Show",
         "hide": "Hide",
-        "clear": "Clear"
+        "clear": "Clear",
+        "quit": "Quit"
+    },
+    "tray": {
+        "showWindow": "Show Window",
+        "hideWindow": "Hide Window",
+        "quit": "Quit"
     },
     "status": {
         "running": "Running",

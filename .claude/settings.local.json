@@ -121,7 +121,20 @@
       "Bash(rustc --edition 2021 --crate-type lib src/commands/settings.rs 2>&1 | head -20)",
       "Bash(git rm:*)",
       "Bash(git add:*)",
-      "Bash(cd \"D:\\\\project\\\\ClawX\" && rm -f scripts/update-openclaw.mjs .github/workflows/check-openclaw-updates.yml docs/DEPENDENCY_MANAGEMENT.md)"
+      "Bash(cd \"D:\\\\project\\\\ClawX\" && rm -f scripts/update-openclaw.mjs .github/workflows/check-openclaw-updates.yml docs/DEPENDENCY_MANAGEMENT.md)",
+      "Bash(ls /d/project/ClawX/build/openclaw/dist/*.js 2>/dev/null | grep -E \"\\(gateway|server|entry\\)\" | head -20)",
+      "Bash(ls -la ~/.openclaw 2>/dev/null || dir %USERPROFILE%\\\\.openclaw 2>/dev/null || echo \"checking alternative paths\")",
+      "Bash(find ~ -name *.rs -path */openclaw/*)",
+      "Bash(find ~/.openclaw -name \"config*\" -o -name \"*.yaml\" -o -name \"*.yml\" -o -name \"*.json\" 2>/dev/null | head -20)",
+      "WebFetch(domain:docs.openclaw.ai)",
+      "Bash(find D:/project/ClawX/node_modules/openclaw -name \"*.ts\" -o -name \"*.js\" | xargs grep -l \"vendor\\\\|provider\" | head -20)",
+      "Bash(find /c/Users/Li/.openclaw -type f -name \"*.json\" 2>/dev/null | head -20)",
+      "Bash(find \"C:/Users/Li/.openclaw\" -name \"*.json\" -type f 2>/dev/null | xargs -I {} sh -c 'echo \"=== {} ===\" && cat \"{}\"' 2>/dev/null | head -100)",
+      "Bash(find \"C:/Users/Li/.openclaw\" -name \"openclaw.json\" -o -name \"agent.json\" 2>/dev/null | xargs -I {} sh -c 'echo \"=== {} ===\" && cat \"{}\"' 2>/dev/null)",
+      "Bash(ls -la \"C:/Users/Li/.openclaw/workspace/.openclaw/\" 2>/dev/null && cat \"C:/Users/Li/.openclaw/workspace/.openclaw/\"*.json 2>/dev/null)",
+      "Bash(cd D:/project/ClawX && npx tsc --noEmit 2>&1 | head -50)",
+      "Bash(cd D:/project/ClawX && npx tsc --noEmit 2>&1 | grep -E \"^src.*error\" | head -20)",
+      "Bash(cd D:/project/ClawX && npx tsc --noEmit 2>&1 | grep -E \"error TS\" | head -5 || echo \"TypeScript: OK\")"
     ]
   }
 }

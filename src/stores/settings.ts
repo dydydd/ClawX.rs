@@ -99,9 +99,13 @@ export const useSettingsStore = create<SettingsState>()(
       init: async () => {
         try {
           const settings = await invokeIpc<Record<string, unknown>>('get_all_settings');
-          set((state) => ({ ...state, ...settings }));
+          // Explicitly handle setupComplete to ensure it's correctly synced from backend
+          const setupComplete = settings.setupComplete;
+          set((state) => ({ ...state, ...settings, setupComplete: setupComplete === true }));
           if (settings.language) {
             i18n.changeLanguage(settings.language as string);
+            // Also update the tray menu language
+            void invokeIpc('update_tray_language_cmd', { language: settings.language }).catch(() => {});
           }
         } catch {
           // Keep renderer-persisted settings as a fallback when the main
@@ -116,6 +120,8 @@ export const useSettingsStore = create<SettingsState>()(
       setLanguage: (language) => {
         i18n.changeLanguage(language);
         set({ language });
+        // Update tray menu language in the backend
+        void invokeIpc('update_tray_language_cmd', { language }).catch(() => {});
         void invokeIpc('set_setting', { key: 'language', value: language }).catch(() => {});
       },
       setStartMinimized: (startMinimized) => {

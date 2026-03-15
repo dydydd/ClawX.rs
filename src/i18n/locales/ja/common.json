@@ -35,7 +35,13 @@
         "restart": "再起動",
         "show": "表示",
         "hide": "非表示",
-        "clear": "クリア"
+        "clear": "クリア",
+        "quit": "終了"
+    },
+    "tray": {
+        "showWindow": "ウィンドウを表示",
+        "hideWindow": "ウィンドウを隠す",
+        "quit": "終了"
     },
     "status": {
         "running": "実行中",

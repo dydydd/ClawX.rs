@@ -1,9 +1,18 @@
 //! Gateway IPC command handlers
 
 use std::sync::Arc;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use tauri::State;
 use crate::core::AppState;
+
+/// Control UI information response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ControlUiInfo {
+    pub success: bool,
+    pub url: String,
+    pub token: String,
+    pub port: u16,
+}
 
 /// Get the current gateway status
 #[tauri::command]
@@ -50,4 +59,31 @@ pub async fn gateway_rpc(
         .rpc(&method, params, timeout)
         .await
         .map_err(|e| e.to_string())
+}
+
+/// Get control UI information (URL, token, port)
+#[tauri::command]
+pub async fn gateway_get_control_ui(
+    state: State<'_, Arc<AppState>>,
+) -> Result<ControlUiInfo, String> {
+    // Get the gateway port from status
+    let status = state.gateway.get_status().await;
+
+    // Get gateway token from settings
+    let token = {
+        let settings = state.settings.read().await;
+        settings.get("gatewayToken")
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .unwrap_or_default()
+    };
+
+    // Construct the control UI URL
+    let url = format!("http://127.0.0.1:{}/control", status.port);
+
+    Ok(ControlUiInfo {
+        success: true,
+        url,
+        token,
+        port: status.port,
+    })
 }

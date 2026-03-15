@@ -92,7 +92,8 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
     // Listen for update events
     // Single source of truth: listen only to update:status-changed
     // (sent by AppUpdater.updateStatus() in the main process)
-    const unlistenStatus = await listen('update:status-changed', (event) => {
+    // Note: These listeners persist for the app lifetime (no cleanup needed for Zustand stores)
+    await listen('update:status-changed', (event) => {
       const status = event.payload as {
         status: UpdateStatus;
         info?: UpdateInfo;
@@ -107,7 +108,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
       });
     });
 
-    const unlistenCountdown = await listen('update:auto-install-countdown', (event) => {
+    await listen('update:auto-install-countdown', (event) => {
       const { seconds, cancelled } = event.payload as { seconds: number; cancelled?: boolean };
       set({ autoInstallCountdown: cancelled ? null : seconds });
     });

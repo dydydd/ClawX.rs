@@ -49,7 +49,6 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { invokeIpc } from '@/lib/api-client';
 import { useSettingsStore } from '@/stores/settings';
-import { hostApiFetch } from '@/lib/host-api';
 import { subscribeHostEvent } from '@/lib/host-events';
 
 const inputClasses = 'h-[44px] rounded-xl font-mono text-[13px] bg-[#eeece3] dark:bg-muted border-black/10 dark:border-white/10 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:border-blue-500 shadow-sm transition-all text-foreground placeholder:text-foreground/40';
@@ -919,10 +918,7 @@ function AddProviderDialog({
       const accountId = supportsMultipleAccounts ? `${selectedType}-${crypto.randomUUID()}` : selectedType;
       const label = name || (typeInfo?.id === 'custom' ? t('aiProviders.custom') : typeInfo?.name) || selectedType;
       pendingOAuthRef.current = { accountId, label };
-      await hostApiFetch('/api/providers/oauth/start', {
-        method: 'POST',
-        body: JSON.stringify({ provider: selectedType, accountId, label }),
-      });
+      await invokeIpc<void>('oauth_start', { provider: selectedType, accountId, label });
     } catch (e) {
       setOauthError(String(e));
       setOauthFlowing(false);
@@ -936,19 +932,14 @@ function AddProviderDialog({
     setManualCodeInput('');
     setOauthError(null);
     pendingOAuthRef.current = null;
-    await hostApiFetch('/api/providers/oauth/cancel', {
-      method: 'POST',
-    });
+    await invokeIpc<void>('oauth_cancel');
   };
 
   const handleSubmitManualOAuthCode = async () => {
     const value = manualCodeInput.trim();
     if (!value) return;
     try {
-      await hostApiFetch('/api/providers/oauth/submit', {
-        method: 'POST',
-        body: JSON.stringify({ code: value }),
-      });
+      await invokeIpc<void>('oauth_submit_code', { code: value });
       setOauthError(null);
     } catch (error) {
       setOauthError(String(error));

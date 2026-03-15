@@ -305,9 +305,112 @@ impl GatewayManager {
 
     /// Send an RPC request to the Gateway
     pub async fn rpc(&self, method: &str, params: Option<serde_json::Value>, timeout_ms: u64) -> Result<serde_json::Value> {
-        let ws_guard = self.websocket.read().await;
-        let ws = ws_guard.as_ref().context("Gateway not connected")?;
-        ws.rpc(method, params, timeout_ms).await
+        // Try the RPC request
+        let result = {
+            let ws_guard = self.websocket.read().await;
+            let ws = ws_guard.as_ref().context("Gateway not connected")?;
+            ws.rpc(method, params.clone(), timeout_ms).await
+        };
+
+        match result {
+            Ok(result) => Ok(result),
+            Err(e) => {
+                // Check if we should try to reconnect
+                let should_reconnect = *self.should_reconnect.read().await;
+                if !should_reconnect {
+                    return Err(e);
+                }
+
+                // Check if WebSocket is disconnected
+                let is_connected = {
+                    let ws_guard = self.websocket.read().await;
+                    ws_guard.as_ref().map(|ws| ws.is_connected()).unwrap_or(false)
+                };
+
+                if is_connected {
+                    // WebSocket is still connected, just return the error
+                    return Err(e);
+                }
+
+                tracing::warn!("WebSocket disconnected, attempting to reconnect...");
+
+                // Try to reconnect
+                let status = self.status.read().await.clone();
+                if status.state != "running" {
+                    return Err(e.context("Gateway not in running state"));
+                }
+
+                // Get token from the current WebSocket
+                let token = {
+                    let ws_guard = self.websocket.read().await;
+                    ws_guard.as_ref().and_then(|ws| ws.get_token().clone())
+                };
+
+                if let Some(token) = token {
+                    // Increment reconnect attempts
+                    let attempts = {
+                        let mut attempts = self.reconnect_attempts.write().await;
+                        *attempts += 1;
+                        *attempts
+                    };
+
+                    if attempts > self.reconnect_config.max_attempts {
+                        tracing::error!("Max reconnection attempts ({}) reached", self.reconnect_config.max_attempts);
+                        let mut status = self.status.write().await;
+                        status.state = "error".to_string();
+                        status.error = Some("Max reconnection attempts reached".to_string());
+                        status.reconnect_attempts = Some(attempts);
+                        return Err(e.context("Max reconnection attempts reached"));
+                    }
+
+                    tracing::info!("Reconnection attempt {}/{}", attempts, self.reconnect_config.max_attempts);
+
+                    // Update status
+                    {
+                        let mut status = self.status.write().await;
+                        status.reconnect_attempts = Some(attempts);
+                    }
+                    self.emit_status_update().await;
+
+                    // Wait a bit before reconnecting
+                    let delay = std::cmp::min(
+                        self.reconnect_config.base_delay_ms * (1 << (attempts - 1)),
+                        self.reconnect_config.max_delay_ms,
+                    );
+                    tokio::time::sleep(Duration::from_millis(delay)).await;
+
+                    // Try to connect WebSocket
+                    let device_identity = self.device_identity.read().await.clone();
+                    let mut ws = GatewayWebSocket::new(DEFAULT_GATEWAY_PORT, device_identity, Some(token));
+
+                    match ws.connect().await {
+                        Ok(()) => {
+                            tracing::info!("Successfully reconnected to Gateway");
+                            *self.websocket.write().await = Some(ws);
+                            *self.reconnect_attempts.write().await = 0;
+
+                            // Update status
+                            {
+                                let mut status = self.status.write().await;
+                                status.reconnect_attempts = None;
+                            }
+                            self.emit_status_update().await;
+
+                            // Retry the RPC request
+                            let ws_guard = self.websocket.read().await;
+                            let ws = ws_guard.as_ref().context("WebSocket lost after reconnect")?;
+                            ws.rpc(method, params, timeout_ms).await
+                        }
+                        Err(reconnect_err) => {
+                            tracing::warn!("Reconnection failed: {}", reconnect_err);
+                            Err(e.context(format!("Reconnection failed: {}", reconnect_err)))
+                        }
+                    }
+                } else {
+                    Err(e.context("No token available for reconnection"))
+                }
+            }
+        }
     }
 
     /// Check Gateway health

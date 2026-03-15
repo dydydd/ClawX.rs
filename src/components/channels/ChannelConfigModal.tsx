@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { open } from '@tauri-apps/plugin-shell';
 import {
   X,
   Loader2,

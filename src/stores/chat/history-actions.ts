@@ -1,5 +1,4 @@
 import { invokeIpc } from '@/lib/api-client';
-import { hostApiFetch } from '@/lib/host-api';
 import {
   clearHistoryPoll,
   enrichWithCachedImages,
@@ -17,10 +16,18 @@ import type { ChatGet, ChatSet, SessionHistoryActions } from './store-api';
 async function loadCronFallbackMessages(sessionKey: string, limit = 200): Promise<RawMessage[]> {
   if (!isCronSessionKey(sessionKey)) return [];
   try {
-    const response = await hostApiFetch<{ messages?: RawMessage[] }>(
-      buildCronSessionHistoryPath(sessionKey, limit),
-    );
-    return Array.isArray(response.messages) ? response.messages : [];
+    // NOTE: This calls the Gateway HTTP API directly via host API proxy.
+    // There is no equivalent RPC method for cron session history in the Gateway's
+    // RPC protocol, so we must use the HTTP endpoint directly.
+    const path = buildCronSessionHistoryPath(sessionKey, limit);
+    const response = await invokeIpc<{ data?: { json?: { messages?: RawMessage[] } } }>('hostapi:fetch', {
+      path,
+      method: 'GET',
+      headers: {},
+      body: null,
+    });
+    const messages = response?.data?.json?.messages;
+    return Array.isArray(messages) ? messages : [];
   } catch (error) {
     console.warn('Failed to load cron fallback history:', error);
     return [];

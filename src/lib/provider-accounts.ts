@@ -29,8 +29,8 @@ export async function fetchProviderSnapshot(): Promise<ProviderSnapshot> {
   // Build statuses array with key info
   const statuses: ProviderWithKeyInfo[] = await Promise.all(
     (accounts || []).map(async (account) => {
-      const hasKey = await invokeIpc<boolean>('has_provider_api_key', account.id).catch(() => false);
-      const keyMasked = hasKey ? await invokeIpc<string>('get_provider_api_key_masked', account.id).catch(() => '') : '';
+      const hasKey = await invokeIpc<boolean>('has_provider_api_key', { providerId: account.id }).catch(() => false);
+      const keyMasked = hasKey ? await invokeIpc<string>('get_provider_api_key_masked', { providerId: account.id }).catch(() => '') : '';
 
       return {
         id: account.id,

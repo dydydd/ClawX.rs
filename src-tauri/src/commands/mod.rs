@@ -1,5 +1,6 @@
 //! Tauri IPC command handlers
 
+pub mod agents;
 pub mod gateway;
 pub mod settings;
 pub mod providers;
@@ -17,3 +18,4 @@ pub mod nodejs;
 pub mod usage;
 pub mod oauth;
 pub mod update;
+pub mod uv;

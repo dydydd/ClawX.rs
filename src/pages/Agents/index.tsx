@@ -159,12 +159,17 @@ export function Agents() {
         variant="destructive"
         onConfirm={async () => {
           if (!agentToDelete) return;
-          await deleteAgent(agentToDelete.id);
-          setAgentToDelete(null);
-          if (activeAgentId === agentToDelete.id) {
-            setActiveAgentId(null);
+          try {
+            await deleteAgent(agentToDelete.id);
+            setAgentToDelete(null);
+            if (activeAgentId === agentToDelete.id) {
+              setActiveAgentId(null);
+            }
+            toast.success(t('toast.agentDeleted'));
+          } catch (error) {
+            console.error('Failed to delete agent:', error);
+            toast.error(t('toast.agentDeleteFailed', { error: String(error) }));
           }
-          toast.success(t('toast.agentDeleted'));
         }}
         onCancel={() => setAgentToDelete(null)}
       />

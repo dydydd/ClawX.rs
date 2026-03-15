@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// OpenClaw package status
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OpenClawStatus {
     /// Whether the package exists
     pub package_exists: bool,
@@ -18,6 +19,7 @@ pub struct OpenClawStatus {
 
 /// OpenClaw CLI command result
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OpenClawCliCommand {
     /// Whether the command was successfully generated
     pub success: bool,

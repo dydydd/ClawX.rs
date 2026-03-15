@@ -264,7 +264,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     }
   },
 
-  validateAccountApiKey: async (providerId, apiKey, options) => {
+  validateAccountApiKey: async (_providerId, _apiKey, _options) => {
     // Validation would need to be implemented on backend
     // For now, just return valid
     return { valid: true };
@@ -274,7 +274,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   getAccountApiKey: async (providerId) => {
     try {
-      const apiKey = await invokeIpc<string | null>('get_provider_api_key', providerId);
+      const apiKey = await invokeIpc<string | null>('get_provider_api_key', { providerId });
       return apiKey;
     } catch {
       return null;

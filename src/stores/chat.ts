@@ -4,6 +4,7 @@
  * Communicates with OpenClaw Gateway via renderer WebSocket RPC.
  */
 import { create } from 'zustand';
+import { invokeIpc } from '@/lib/api-client';
 import { hostApiFetch } from '@/lib/host-api';
 import { useGatewayStore } from './gateway';
 import { useAgentsStore } from './agents';
@@ -606,12 +607,9 @@ async function loadMissingPreviews(messages: RawMessage[]): Promise<boolean> {
   if (needPreview.length === 0) return false;
 
   try {
-    const thumbnails = await hostApiFetch<Record<string, { preview: string | null; fileSize: number }>>(
-      '/api/files/thumbnails',
-      {
-        method: 'POST',
-        body: JSON.stringify({ paths: needPreview }),
-      },
+    const thumbnails = await invokeIpc<Record<string, { preview: string | null; fileSize: number }>>(
+      'get_file_thumbnails',
+      { paths: needPreview },
     );
 
     let updated = false;
@@ -687,6 +685,9 @@ function parseSessionUpdatedAtMs(value: unknown): number | undefined {
 async function loadCronFallbackMessages(sessionKey: string, limit = 200): Promise<RawMessage[]> {
   if (!isCronSessionKey(sessionKey)) return [];
   try {
+    // Note: No Gateway RPC equivalent exists for cron session history.
+    // The Gateway only exposes chat.send, chat.history, sessions.list, etc. via WebSocket RPC.
+    // The /api/cron/session-history endpoint is only available via HTTP API.
     const response = await hostApiFetch<{ messages?: RawMessage[] }>(
       buildCronSessionHistoryPath(sessionKey, limit),
     );
@@ -1176,6 +1177,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Soft-delete the session's JSONL transcript on disk.
     // The main process renames <suffix>.jsonl → <suffix>.deleted.jsonl so that
     // sessions.list skips it automatically.
+    //
+    // Note: No Gateway RPC equivalent exists for sessions.delete.
+    // The Gateway only exposes sessions.list via WebSocket RPC, not sessions.delete.
+    // This endpoint is only available via the Gateway HTTP API.
     try {
       const result = await hostApiFetch<{
         success: boolean;
@@ -1557,6 +1562,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const CHAT_SEND_TIMEOUT_MS = 120_000;
 
       if (hasMedia) {
+        // Note: No Gateway RPC equivalent exists for sending messages with media attachments.
+        // The Gateway's chat.send RPC method does not support media parameters.
+        // This endpoint is only available via the Gateway HTTP API.
         result = await hostApiFetch<{ success: boolean; result?: { runId?: string }; error?: string }>(
           '/api/chat/send-with-media',
           {

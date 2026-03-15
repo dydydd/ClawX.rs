@@ -138,13 +138,6 @@ function App() {
 
   // Listen for navigation events from main process
   useEffect(() => {
-    const handleNavigate = (...args: unknown[]) => {
-      const path = args[0];
-      if (typeof path === 'string') {
-        navigate(path);
-      }
-    };
-
     // Setup event listener
     let unlisten: (() => void) | null = null;
     listen('navigate', (event) => {

@@ -438,6 +438,11 @@ impl GatewayWebSocket {
         self.tx.is_some()
     }
 
+    /// Get the gateway token
+    pub fn get_token(&self) -> &Option<String> {
+        &self.gateway_token
+    }
+
     /// Close the connection
     pub async fn close(&mut self) {
         if let Some(shutdown_tx) = self.shutdown_tx.take() {

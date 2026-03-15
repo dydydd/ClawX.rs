@@ -11,6 +11,7 @@ mod services;
 use std::sync::Arc;
 use tauri::Manager;
 use crate::core::AppState;
+use crate::services::tray::{init_tray, get_tray_language_from_state, update_tray_language};
 
 fn main() {
     run();
@@ -32,11 +33,19 @@ pub fn run() {
             Some(vec!["--flag1", "--flag2"]),
         ))
         .invoke_handler(tauri::generate_handler![
+            // Agent commands
+            commands::agents::list_agents,
+            commands::agents::create_agent,
+            commands::agents::update_agent,
+            commands::agents::delete_agent,
+            commands::agents::agent_assign_channel,
+            commands::agents::agent_remove_channel,
             // Gateway commands
             commands::gateway::gateway_get_status,
             commands::gateway::gateway_start,
             commands::gateway::gateway_stop,
             commands::gateway::gateway_rpc,
+            commands::gateway::gateway_get_control_ui,
             // Settings commands
             commands::settings::get_setting,
             commands::settings::set_setting,
@@ -59,6 +68,8 @@ pub fn run() {
             commands::providers::has_provider_api_key,
             commands::providers::delete_provider_api_key,
             commands::providers::get_provider_api_key_masked,
+            commands::providers::validate_provider_api_key,
+            commands::providers::sync_provider_auth_to_openclaw,
             // Channel commands
             commands::channels::list_channels,
             commands::channels::get_channel,
@@ -101,6 +112,7 @@ pub fn run() {
             // App commands
             commands::app::get_app_info,
             commands::app::get_platform,
+            commands::app::update_tray_language_cmd,
             // Window commands
             commands::window::minimize_window,
             commands::window::maximize_window,
@@ -112,6 +124,9 @@ pub fn run() {
             // File commands
             commands::files::read_file,
             commands::files::write_file,
+            commands::files::stage_file_paths,
+            commands::files::stage_file_buffer,
+            commands::files::get_file_thumbnails,
             // OpenClaw commands
             commands::openclaw::openclaw_status,
             commands::openclaw::openclaw_get_skills_dir,
@@ -142,6 +157,10 @@ pub fn run() {
             commands::update::update_set_channel,
             commands::update::update_set_auto_download,
             commands::update::update_cancel_auto_install,
+            // UV commands
+            commands::uv::uv_install_all,
+            commands::uv::uv_check_installed,
+            commands::uv::uv_check_python_ready,
         ])
         .setup(|app| {
             // Logging is already initialized in AppState::new()
@@ -193,6 +212,25 @@ pub fn run() {
             .expect("Failed to initialize cron scheduler");
             tracing::info!("Cron scheduler started");
 
+            // Auto-start gateway if enabled (must be done before moving state)
+            let should_auto_start = tauri::async_runtime::block_on(async {
+                let settings = state.settings.read().await;
+                settings.get("gatewayAutoStart")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true) // Default to true if not set
+            });
+
+            let auto_start_token = if should_auto_start {
+                tauri::async_runtime::block_on(async {
+                    let settings = state.settings.read().await;
+                    settings.get("gatewayToken")
+                        .and_then(|v| v.as_str().map(|s| s.to_string()))
+                        .unwrap_or_default()
+                })
+            } else {
+                String::new()
+            };
+
             app.manage(Arc::new(state));
             app.manage(logger);
             app.manage(channels);
@@ -207,12 +245,37 @@ pub fn run() {
 
             tracing::info!("Application state initialized");
 
-            // TODO: Initialize gateway manager state
+            if should_auto_start {
+                tracing::info!("Auto-starting gateway (gatewayAutoStart is enabled)");
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = gateway.start(auto_start_token).await {
+                        tracing::error!("Failed to auto-start gateway: {}", e);
+                    } else {
+                        tracing::info!("Gateway auto-started successfully");
+                    }
+                });
+            } else {
+                tracing::info!("Gateway auto-start is disabled");
+            }
+
             // TODO: Load and apply proxy settings
             // TODO: Sync launch-at-startup setting
-            // TODO: Create system tray
             // TODO: Create application menu
-            // TODO: Auto-start gateway if enabled
+
+            // Create system tray using the new i18n-aware implementation
+            let _tray = init_tray(app.handle())?;
+
+            // Get current language from settings and apply to tray
+            let current_language = tauri::async_runtime::block_on(async {
+                get_tray_language_from_state(app.handle()).await
+            });
+            if let Err(e) = tauri::async_runtime::block_on(async {
+                update_tray_language(app.handle(), &current_language).await
+            }) {
+                tracing::warn!("Failed to set initial tray language: {}", e);
+            }
+
+            tracing::info!("System tray initialized successfully with language: {}", current_language);
 
             Ok(())
         })

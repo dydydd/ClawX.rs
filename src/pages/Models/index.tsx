@@ -95,21 +95,12 @@ export function Models() {
           restartMarker,
         });
 
-        if (normalized.length === 0 && attempt < USAGE_FETCH_MAX_ATTEMPTS) {
-          trackUiEvent('models.token_usage_fetch_retry_scheduled', {
+        // Note: Empty data is a valid state (e.g., no agents or no usage history)
+        // We should not retry just because there's no data - only retry on errors
+        if (normalized.length === 0) {
+          trackUiEvent('models.token_usage_fetch_empty', {
             generation,
             attempt,
-            reason: 'empty',
-            restartMarker,
-          });
-          usageFetchTimerRef.current = setTimeout(() => {
-            void fetchUsageHistoryWithRetry(attempt + 1);
-          }, USAGE_FETCH_RETRY_DELAY_MS);
-        } else if (normalized.length === 0) {
-          trackUiEvent('models.token_usage_fetch_exhausted', {
-            generation,
-            attempt,
-            reason: 'empty',
             restartMarker,
           });
         }

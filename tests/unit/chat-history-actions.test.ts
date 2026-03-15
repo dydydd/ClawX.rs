@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const invokeIpcMock = vi.fn();
-const hostApiFetchMock = vi.fn();
 const clearHistoryPoll = vi.fn();
 const enrichWithCachedImages = vi.fn((messages) => messages);
 const enrichWithToolResultFiles = vi.fn((messages) => messages);
@@ -16,10 +15,6 @@ const toMs = vi.fn((ts: number) => ts < 1e12 ? ts * 1000 : ts);
 
 vi.mock('@/lib/api-client', () => ({
   invokeIpc: (...args: unknown[]) => invokeIpcMock(...args),
-}));
-
-vi.mock('@/lib/host-api', () => ({
-  hostApiFetch: (...args: unknown[]) => hostApiFetchMock(...args),
 }));
 
 vi.mock('@/stores/chat/helpers', () => ({
@@ -75,7 +70,6 @@ describe('chat history actions', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     invokeIpcMock.mockResolvedValue({ success: true, result: { messages: [] } });
-    hostApiFetchMock.mockResolvedValue({ messages: [] });
   });
 
   it('uses cron session fallback when gateway history is empty', async () => {
@@ -85,27 +79,39 @@ describe('chat history actions', () => {
     });
     const actions = createHistoryActions(h.set as never, h.get as never);
 
-    hostApiFetchMock.mockResolvedValueOnce({
-      messages: [
-        {
-          id: 'cron-meta-job-1',
-          role: 'system',
-          content: 'Scheduled task: Drink water',
-          timestamp: 1773281731495,
+    // First call is gateway:rpc for chat.history, second is hostapi:fetch for cron fallback
+    invokeIpcMock.mockResolvedValueOnce({ success: true, result: { messages: [] } });
+    invokeIpcMock.mockResolvedValueOnce({
+      data: {
+        json: {
+          messages: [
+            {
+              id: 'cron-meta-job-1',
+              role: 'system',
+              content: 'Scheduled task: Drink water',
+              timestamp: 1773281731495,
+            },
+            {
+              id: 'cron-run-1',
+              role: 'assistant',
+              content: 'Drink water 💧',
+              timestamp: 1773281732751,
+            },
+          ],
         },
-        {
-          id: 'cron-run-1',
-          role: 'assistant',
-          content: 'Drink water 💧',
-          timestamp: 1773281732751,
-        },
-      ],
+      },
     });
 
     await actions.loadHistory();
 
-    expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/cron/session-history?sessionKey=agent%3Amain%3Acron%3Ajob-1&limit=200',
+    expect(invokeIpcMock).toHaveBeenCalledWith(
+      'hostapi:fetch',
+      {
+        path: '/api/cron/session-history?sessionKey=agent%3Amain%3Acron%3Ajob-1&limit=200',
+        method: 'GET',
+        headers: {},
+        body: null,
+      },
     );
     expect(h.read().messages.map((message) => message.content)).toEqual([
       'Scheduled task: Drink water',
@@ -124,7 +130,13 @@ describe('chat history actions', () => {
 
     await actions.loadHistory();
 
-    expect(hostApiFetchMock).not.toHaveBeenCalled();
+    // Should only call gateway:rpc, not hostapi:fetch
+    expect(invokeIpcMock).toHaveBeenCalledTimes(1);
+    expect(invokeIpcMock).toHaveBeenCalledWith(
+      'gateway:rpc',
+      'chat.history',
+      { sessionKey: 'agent:main:main', limit: 200 },
+    );
     expect(h.read().messages).toEqual([]);
     expect(h.read().loading).toBe(false);
   });
